@@ -8,12 +8,13 @@ import SwiftData
 
 @main
 struct MonakaApp: App {
-    // Phase 2 replaces this with the App Group container in SharedStore.
     let modelContainer: ModelContainer = {
         do {
-            return try ModelContainer(for: Spot.self)
+            return try SharedStore.makeModelContainer()
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // A missing App Group is a build misconfiguration, not a runtime
+            // condition — there is nothing useful to show the user.
+            fatalError("Could not open the shared store: \(error)")
         }
     }()
 
