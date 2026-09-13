@@ -199,6 +199,10 @@ struct SpotMapView: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(12)
+            // Without this the `Spacer` in the middle isn't hit-testable, the
+            // tap falls through to the Map, and the Map clears its selection —
+            // so the card appears to dismiss itself instead of navigating.
+            .contentShape(.rect(cornerRadius: 18))
         }
         .buttonStyle(.plain)
         .navigationLinkIndicatorVisibility(.hidden)
