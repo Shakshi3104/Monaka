@@ -25,9 +25,18 @@ struct SpotDraft {
 
     var hasLocation: Bool { location != nil }
 
-    /// Title and a location are both required to save (§8.1).
+    /// What a spot actually needs. Editing requires only this — a spot
+    /// captured through the share sheet has no location (§8.1), and demanding
+    /// one here would make it impossible to correct anything about it,
+    /// including its run.
     var isSaveable: Bool {
-        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && hasLocation
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Adding a spot in the app additionally pins it, so it reaches the Map
+    /// tab (§8.1).
+    var isAddable: Bool {
+        isSaveable && hasLocation
     }
 
     init() {}
