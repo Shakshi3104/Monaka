@@ -2,60 +2,51 @@
 //  ContentView.swift
 //  Monaka
 //
-//  Created by satoshikobayashi on 2026/09/13.
+//  Root. Two lenses on the same collection plus the list; each tab owns its own
+//  NavigationStack. Add sits in the detached `.search` slot at the end of the
+//  tab bar and opens a sheet instead of switching tabs.
 //
 
 import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    enum AppTab: Hashable {
+        case today, all, map, add
+    }
+
+    @State private var selection: AppTab = .today
+    @State private var isAddingSpot = false
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
+        TabView(selection: $selection) {
+            Tab("Today", systemImage: "sun.horizon", value: AppTab.today) {
+                TodayView()
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
+            Tab("All", systemImage: "list.bullet", value: AppTab.all) {
+                SpotListView()
             }
-        } detail: {
-            Text("Select an item")
+            Tab("Map", systemImage: "map", value: AppTab.map) {
+                SpotMapView()
+            }
+            Tab("Add", systemImage: "plus", value: AppTab.add, role: .search) {
+                // Never shown: selecting this tab bounces straight back and
+                // presents the sheet below.
+                Color.clear
+            }
         }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+        .onChange(of: selection) { previous, current in
+            guard current == .add else { return }
+            selection = previous == .add ? .today : previous
+            isAddingSpot = true
         }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
+        .sheet(isPresented: $isAddingSpot) {
+            AddSpotView()
         }
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+        .modelContainer(Spot.previewContainer)
 }

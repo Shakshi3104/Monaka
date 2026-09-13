@@ -1,0 +1,53 @@
+//
+//  AddSpotView.swift
+//  Monaka
+//
+//  The Add form. Every spot gets a location here (§8.1); OGP autofill and the
+//  share-sheet routes land on the same SpotDraft in Phase 2.
+//
+
+import SwiftUI
+import SwiftData
+
+struct AddSpotView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
+    /// Prefilled by a capture route; empty when typed by hand.
+    var draft: SpotDraft = SpotDraft()
+
+    @State private var form = SpotDraft()
+    @State private var hasLoadedDraft = false
+
+    var body: some View {
+        NavigationStack {
+            SpotFormView(draft: $form)
+                .navigationTitle("New Spot")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") { save() }
+                            .disabled(!form.isSaveable)
+                    }
+                }
+                .onAppear {
+                    guard !hasLoadedDraft else { return }
+                    hasLoadedDraft = true
+                    form = draft
+                }
+        }
+    }
+
+    private func save() {
+        modelContext.insert(form.makeSpot())
+        dismiss()
+    }
+}
+
+#Preview {
+    AddSpotView()
+        .modelContainer(Spot.previewContainer)
+}
