@@ -15,7 +15,16 @@ struct ContentView: View {
         case today, all, map, add
     }
 
-    @State private var selection: AppTab = .today
+    /// DEBUG only: nothing outside the app can tap the tab bar, so a launch
+    /// argument opens straight into a tab for screenshots (§4).
+    @State private var selection: AppTab = {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-tab-map") { return .map }
+        if arguments.contains("-tab-all") { return .all }
+        #endif
+        return .today
+    }()
     @State private var isAddingSpot = false
 
     var body: some View {
