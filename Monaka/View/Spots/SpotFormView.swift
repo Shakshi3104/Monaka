@@ -128,11 +128,10 @@ struct SpotFormView: View {
         isFetchingMetadata = true
         defer { isFetchingMetadata = false }
 
-        guard let metadata = try? await OGMetadataFetcher().fetch(url) else { return }
-
-        if draft.title.isEmpty, let title = metadata.title { draft.title = title }
-        if draft.venue.isEmpty, let siteName = metadata.siteName { draft.venue = siteName }
-        if draft.imageURL == nil { draft.imageURL = metadata.imageURL }
+        // Through the dispatcher, so a pasted Google Maps link fills the
+        // coordinates instead of being fetched as a web page (§8.1).
+        let resolved = await ShareInputResolver().resolve(.url(url))
+        draft.fillEmptyFields(from: resolved)
     }
 
     // MARK: - Location

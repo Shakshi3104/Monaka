@@ -228,7 +228,9 @@ The share extension and the in-app URL field both hand their input to `ShareInpu
 
 A resolver that fails fills nothing and is not an error (§13). The form opens either way.
 
-**Every spot gets a location at add time.** The dispatcher only produces coordinates for map links, so the Add form carries a location picker (`LocationPickerView`, `MKLocalSearch` + a draggable pin) and it is part of the normal add flow, not an afterthought — an exhibition shared from a museum's own page would otherwise never reach the Map tab. Seed the search field with whatever `venue` the OGP fetch produced. User-initiated only: this is not the bulk geocoding §3 rules out.
+**Every spot gets a location at add time — in the app.** The dispatcher only produces coordinates for map links, so the Add form carries a location picker (`LocationPickerView`, `MKLocalSearch`) and it is part of the normal add flow, not an afterthought — an exhibition shared from a museum's own page would otherwise never reach the Map tab. Seed the search field with whatever `venue` the OGP fetch produced. User-initiated only: this is not the bulk geocoding §3 rules out.
+
+**The share extension is the exception.** A share should be two taps, so `ShareFormView` has no map picker and only requires a title; it says so in the form. A spot captured that way can arrive without coordinates and gets pinned later in the app.
 
 ### 8.2 Google Maps links
 
@@ -295,7 +297,11 @@ Two things still need Xcode's GUI and must be handed back to the user:
 - New **targets** (the share extension, the widget extension)
 - **Capabilities** (App Groups) and asset catalog entries created through the asset editor
 
-Also: a synchronized folder can only belong to one target. `Spot.swift` and `SharedStore.swift` are therefore **duplicated verbatim** into `MonakaShare/`. **Edit both copies together.**
+Also: a synchronized folder can only belong to one target. These six files are therefore **duplicated verbatim** into `MonakaShare/`:
+
+`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`
+
+**Edit both copies together**, and keep them byte-identical — `diff` them after touching any of them. Only files with no app-only dependency belong on this list; anything that interprets a spot (`Spot+Period.swift`) stays app-only.
 
 ---
 
@@ -356,7 +362,7 @@ MonakaShare/                        share extension target (Phase 2)
 - [x] Deployment Target iOS 26.0
 - [x] `Monaka/` added as a **synchronized folder**
 - [x] AccentColor `#A9414E` (Any) / `#C85C68` (Dark) in the asset catalog
-- [ ] App Group `group.com.shakshi.Monaka`
+- [x] App Group `group.com.shakshi.Monaka`
 - [x] `Shakshi3104/Monaka` created on GitHub (public)
 
 ### Phase 1 — Foundation
@@ -373,11 +379,11 @@ MonakaShare/                        share extension target (Phase 2)
 **Phase 1 is done.**
 
 ### Phase 2 — Capture
-- [ ] `SharedStore.swift` + App Group container
-- [ ] `MonakaShare` extension target
+- [x] `SharedStore.swift` + App Group container (moves a pre-App-Group `default.store` across once)
+- [x] `MonakaShare` extension target (SwiftUI, `ShareFormView`)
 - [x] `OGMetadataFetcher` + autofill on URL entry (Fetch Info / PasteButton in `SpotFormView`)
-- [ ] `ShareInputResolver` dispatch (§8.1)
-- [ ] `MapLinkResolver` — share a place from Google Maps (§8.2)
+- [x] `ShareInputResolver` dispatch (§8.1) — also used by the in-app URL field
+- [x] `MapLinkResolver` — share a place from Google Maps (§8.2)
 - [ ] `SavedPlacesImporter` — Takeout CSV import with preview (§8.3)
 - [x] `Anytime` collapsing (§7.3)
 - [ ] Distance sort + `LocationProvider` (§7.3)
