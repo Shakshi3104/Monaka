@@ -13,6 +13,10 @@ import MapKit
 struct SpotFormView: View {
     @Binding var draft: SpotDraft
 
+    /// Adding pins the spot; editing must not insist on it, or a spot that
+    /// arrived through the share sheet could never be corrected (§8.1).
+    var requiresLocation = false
+
     /// Every tag already in use, for the suggestion row.
     @Query private var spots: [Spot]
 
@@ -179,7 +183,9 @@ struct SpotFormView: View {
             Text("Location")
         } footer: {
             if draft.location == nil {
-                Text("Pin the spot so it shows up on the Map tab.")
+                Text(requiresLocation
+                     ? "Required. Pin the spot so it shows up on the Map tab."
+                     : "Not pinned yet, so it won't show up on the Map tab.")
             }
         }
     }

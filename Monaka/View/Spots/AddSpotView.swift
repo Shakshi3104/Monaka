@@ -21,7 +21,7 @@ struct AddSpotView: View {
 
     var body: some View {
         NavigationStack {
-            SpotFormView(draft: $form)
+            SpotFormView(draft: $form, requiresLocation: true)
                 .navigationTitle("New Spot")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -30,7 +30,7 @@ struct AddSpotView: View {
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") { save() }
-                            .disabled(!form.isSaveable)
+                            .disabled(!form.isAddable)
                     }
                 }
                 .onAppear {

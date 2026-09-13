@@ -11,6 +11,7 @@ import SwiftData
 
 struct EditSpotView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     let spot: Spot
 
@@ -33,6 +34,9 @@ struct EditSpotView: View {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") {
                             form.apply(to: spot)
+                            // Autosave would get there eventually; this makes
+                            // the write happen before the sheet goes away.
+                            try? modelContext.save()
                             dismiss()
                         }
                         .disabled(!form.isSaveable)
