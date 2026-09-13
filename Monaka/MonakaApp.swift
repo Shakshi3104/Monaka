@@ -2,22 +2,16 @@
 //  MonakaApp.swift
 //  Monaka
 //
-//  Created by satoshikobayashi on 2026/09/13.
-//
 
 import SwiftUI
 import SwiftData
 
 @main
 struct MonakaApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
+    // Phase 2 replaces this with the App Group container in SharedStore.
+    let modelContainer: ModelContainer = {
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(for: Spot.self)
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
@@ -27,6 +21,6 @@ struct MonakaApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(modelContainer)
     }
 }
