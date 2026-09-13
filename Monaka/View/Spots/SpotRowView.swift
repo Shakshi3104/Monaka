@@ -7,12 +7,21 @@
 
 import SwiftUI
 import SwiftData
+import CoreLocation
 
 struct SpotRowView: View {
     let spot: Spot
     var date: Date = .now
+    /// Set only while distance sort is on, so the trailing slot can show how
+    /// far away an Anytime spot is instead of an empty countdown (§7.3).
+    var from: CLLocation?
 
     private var countdown: Spot.Countdown { spot.countdown(on: date) }
+
+    private var distanceText: String? {
+        guard let from, let distance = spot.distance(from: from) else { return nil }
+        return distance.formattedDistance
+    }
 
     /// `venue · 2026/04/11 – 06/21`. Falls back to the tags so a bare
     /// Anytime spot doesn't render an empty second line.
@@ -41,12 +50,21 @@ struct SpotRowView: View {
 
             Spacer(minLength: 8)
 
-            if let text = countdown.text {
-                Text(text)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(countdown.emphasis.color)
-                    .lineLimit(1)
+            // Both can show: the countdown says how long you've got, the
+            // distance how far it is. Neither replaces the other.
+            VStack(alignment: .trailing, spacing: 2) {
+                if let text = countdown.text {
+                    Text(text)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(countdown.emphasis.color)
+                }
+                if let distanceText {
+                    Text(distanceText)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
+            .lineLimit(1)
         }
         .padding(.vertical, 2)
     }
