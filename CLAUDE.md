@@ -214,9 +214,17 @@ The upcoming weekend is the one we're currently inside if today is Sat/Sun, othe
 Once Google Maps places are imported, `Anytime` will hold an order of magnitude more rows than every dated section combined, and a naive list buries the exhibitions — the thing the app exists for — under a hundred cafés. Two rules keep that from happening:
 
 - **Collapse it.** Above 8 items the `Anytime` section renders as a header row with a count and a disclosure. Expanded state is `@AppStorage`, not SwiftData.
-- **Sort it by distance when that's possible.** With coordinates and an authorized location, `Anytime` sorts nearest-first; otherwise `addedAt` descending. This is what makes the imported places actually useful — "I'm here, what did I want to try nearby" is how that list gets read, and it is never read by date.
+- **Sort by distance when that's possible.** This is what makes the imported places actually useful — "I'm here, what did I want to try nearby" is how that list gets read, and it is never read by date.
 
-**Request location only when the user turns distance sort on.** Never at launch, never on first import. `NSLocationWhenInUseUsageDescription` in `Info.plist` explains it in those terms. The app is fully usable with location denied.
+### Distance sort
+
+A single **Sort by Distance** toggle in Settings (`@AppStorage("sortsByDistance")`), off by default.
+
+It reorders **within** each section, never across them — `Anytime` is where it matters most, but a nearby exhibition beats a far one in `Open Now` too, and the sections themselves still mean "how much run is left", which distance can't replace. Spots with no coordinate keep to the back of their section in their existing order. With the toggle off, or with no fix yet, every section falls back to its §7.2 order.
+
+While it's on, a row shows the distance under the countdown — both, since one says how long you've got and the other how far it is.
+
+**Request location only when the user turns that toggle on.** Never at launch, never on first import, never on opening the Map tab. `INFOPLIST_KEY_NSLocationWhenInUseUsageDescription` explains it in those terms. The app is fully usable with location denied — `LocationProvider.access` becomes `.denied`, Settings says so, and the lists keep their usual order.
 
 ---
 
@@ -351,7 +359,7 @@ Monaka/
     ├── Calendar/
     │   └── CalendarView.swift      month grid with run bars (Phase 4)
     └── Settings/
-        ├── SettingsView.swift
+        ├── SettingsView.swift          sheet off the gear in the All tab
         ├── TagsView.swift              rename / delete tags across spots
         ├── ImportView.swift            Takeout CSV picker + per-row preview
         └── AboutView.swift
@@ -393,13 +401,14 @@ MonakaShare/                        share extension target (Phase 2)
 - [x] `OGMetadataFetcher` + autofill on URL entry (Fetch Info / PasteButton in `SpotFormView`)
 - [x] `ShareInputResolver` dispatch (§8.1) — also used by the in-app URL field
 - [x] `MapLinkResolver` — share a place from Google Maps (§8.2)
-- [ ] `SavedPlacesImporter` — Takeout CSV import with preview (§8.3)
 - [x] `Anytime` collapsing (§7.3)
-- [ ] Distance sort + `LocationProvider` (§7.3)
+- [x] Distance sort + `LocationProvider` (§7.3) — applies within every section
 - [x] `SpotMapView` — pins tinted by countdown, selection card, unpinned-spots sheet
-- [ ] Tag management (rename / delete across spots, filter by tag)
+- [x] Tag management — `SettingsView` + `TagsView` (rename / delete across spots), tag filter in the All tab
+- [x] Hide Ended from Settings (§7.2)
 
 ### Phase 3 — Reminding
+- [ ] `SavedPlacesImporter` — Takeout CSV import with preview (§8.3)
 - [ ] Widget (ending soon / this weekend)
 - [ ] Local notification 3 days before a run ends
 
