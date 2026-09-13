@@ -357,7 +357,7 @@ MonakaShare/                        share extension target (Phase 2)
 - [x] `Monaka/` added as a **synchronized folder**
 - [x] AccentColor `#A9414E` (Any) / `#C85C68` (Dark) in the asset catalog
 - [ ] App Group `group.com.shakshi.Monaka`
-- [ ] `Shakshi3104/Monaka` created on GitHub
+- [x] `Shakshi3104/Monaka` created on GitHub (public)
 
 ### Phase 1 — Foundation
 - [x] `Model/Spot.swift`
