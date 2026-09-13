@@ -107,6 +107,15 @@ xcodebuild -scheme Monaka clean
 xcrun simctl list devices available
 ```
 
+### Screenshot a specific tab
+
+Nothing outside the app can tap the tab bar, so `ContentView` reads a DEBUG-only launch argument to open straight into a tab. Use it to verify a screen you can't reach from the launch state:
+
+```bash
+xcrun simctl launch booted com.shakshi.Monaka -tab-map    # or -tab-all
+xcrun simctl io booted screenshot /tmp/monaka.png
+```
+
 If a build fails, read the output carefully and fix the errors before reporting back. Do not stop at the first error — fix as many as you can in one pass.
 
 ---
@@ -387,7 +396,7 @@ MonakaShare/                        share extension target (Phase 2)
 - [ ] `SavedPlacesImporter` — Takeout CSV import with preview (§8.3)
 - [x] `Anytime` collapsing (§7.3)
 - [ ] Distance sort + `LocationProvider` (§7.3)
-- [ ] `SpotMapView` — real map with pins (currently a stub)
+- [x] `SpotMapView` — pins tinted by countdown, selection card, unpinned-spots sheet
 - [ ] Tag management (rename / delete across spots, filter by tag)
 
 ### Phase 3 — Reminding
