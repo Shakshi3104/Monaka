@@ -26,7 +26,7 @@ struct MonakaApp: App {
                 // spread the previews use. Additive: it never overwrites a spot
                 // that's already there.
                 .task {
-                    guard ProcessInfo.processInfo.arguments.contains("-seed-samples") else { return }
+                    guard DebugLaunchArgument.seedSamples.isSet else { return }
                     Spot.seedSamples(into: modelContainer.mainContext)
                 }
                 #endif

@@ -117,7 +117,7 @@ struct TodayView: View {
         // §4 — the detail screen can't be reached from the launch state, so a
         // launch argument pushes the featured spot for screenshots.
         .onAppear {
-            guard ProcessInfo.processInfo.arguments.contains("-detail-first"),
+            guard DebugLaunchArgument.detail.isSet || DebugLaunchArgument.editSheet.isSet,
                   path.isEmpty,
                   let spot = digest.featured?.spot
             else { return }
