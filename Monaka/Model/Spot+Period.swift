@@ -359,6 +359,9 @@ extension DateFormatter {
     static let monakaDate = monaka("yyyy/MM/dd")
     /// `Saturday`
     static let monakaWeekday = monaka("EEEE")
+    /// `2026/04/11 Sat` — the §6.1 format plus the day of the week, which is
+    /// what you actually plan a visit around.
+    static let monakaDateWithWeekday = monaka("yyyy/MM/dd (E)")
 }
 
 extension Spot {
