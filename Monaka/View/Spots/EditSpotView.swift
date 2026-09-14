@@ -16,11 +16,20 @@ struct EditSpotView: View {
     let spot: Spot
 
     @State private var form: SpotDraft
+    @State private var isConfirmingDiscard = false
+
+    /// What the spot looked like when the sheet opened, so an edited form can
+    /// be told from an untouched one.
+    private let original: SpotDraft
 
     init(spot: Spot) {
         self.spot = spot
-        _form = State(initialValue: SpotDraft(spot))
+        let draft = SpotDraft(spot)
+        self.original = draft
+        _form = State(initialValue: draft)
     }
+
+    private var hasChanges: Bool { form != original }
 
     var body: some View {
         NavigationStack {
@@ -29,20 +38,25 @@ struct EditSpotView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
+                        Button("Cancel") {
+                            if hasChanges { isConfirmingDiscard = true } else { dismiss() }
+                        }
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") {
-                            form.apply(to: spot)
-                            // Autosave would get there eventually; this makes
-                            // the write happen before the sheet goes away.
-                            try? modelContext.save()
-                            dismiss()
-                        }
-                        .disabled(!form.isSaveable)
+                        Button("Save") { save() }
+                            .disabled(!form.isSaveable)
                     }
                 }
+                .discardChangesGuard(hasChanges: hasChanges, isPresented: $isConfirmingDiscard)
         }
+    }
+
+    private func save() {
+        form.apply(to: spot)
+        // Autosave would get there eventually; this makes the write happen
+        // before the sheet goes away.
+        try? modelContext.save()
+        dismiss()
     }
 }
 
