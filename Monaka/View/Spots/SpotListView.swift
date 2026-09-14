@@ -20,6 +20,7 @@ struct SpotListView: View {
     @AppStorage("isAnytimeExpanded") private var isAnytimeExpanded = false
     @AppStorage("hidesEndedSection") private var hidesEndedSection = false
     @AppStorage("sortsByDistance") private var sortsByDistance = false
+    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
 
     @State private var locationProvider = LocationProvider()
     @State private var today: Date = .now
@@ -27,7 +28,9 @@ struct SpotListView: View {
     /// §4 — Settings is a sheet off a gear nothing outside the app can tap.
     @State private var isShowingSettings = {
         #if DEBUG
-        DebugLaunchArgument.tagsScreen.isSet || DebugLaunchArgument.newTagScreen.isSet
+        DebugLaunchArgument.tagsScreen.isSet
+            || DebugLaunchArgument.newTagScreen.isSet
+            || DebugLaunchArgument.iconPicker.isSet
         #else
         false
         #endif
@@ -111,9 +114,10 @@ struct SpotListView: View {
     private var tagFilterMenu: some View {
         Menu {
             Picker("Tag", selection: $selectedTag) {
-                Text("All Spots").tag(String?.none)
+                Label("All Spots", systemImage: "circle.grid.2x2").tag(String?.none)
                 ForEach(allTags, id: \.self) { tag in
-                    Text(tag).tag(String?.some(tag))
+                    Label(tag, systemImage: TagVocabulary.icon(for: tag, in: vocabularyRaw))
+                        .tag(String?.some(tag))
                 }
             }
         } label: {

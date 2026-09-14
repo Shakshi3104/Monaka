@@ -50,7 +50,7 @@ No SPM dependencies. Everything the app needs is in the standard library + Swift
 - **The run is two Optionals** (`startDate`, `endDate`), not a required range. See §7 for how the four combinations are interpreted.
 - **Coordinates are stored; nothing else about the place is.** `latitude` / `longitude` / `address` / `mapURL`. No Google API key, no Place ID, no cached tiles, no geocoding at import time.
 - **Tags are a plain `[String]`** on `Spot`, not a relationship and not a single category — an exhibition can be `Exhibition` + `Ends soon` + `Ueno` at once. Unlike `Feed.category` in yomy, there is no tag entity: the Add form suggests tags already in use so the vocabulary converges without a tag table, and `TagsView` rewrites every spot when one is renamed.
-- **A tag the user has named but not used yet lives in `TagVocabulary`** (`@AppStorage`), not SwiftData. Without a tag entity there is nowhere else for a zero-spot tag to exist, and setting a vocabulary up in advance is worth having. It stays strictly a list of names: `Spot.tags` remains the only answer to *which* spots carry a tag, and these names only widen the form's suggestions and fill out the Tags screen.
+- **A tag's name and icon live in `TagVocabulary`** (`@AppStorage`, JSON), not SwiftData. Without a tag entity there is nowhere else for a zero-spot tag or an SF Symbol to exist, and setting a vocabulary up in advance is worth having. It stays strictly vocabulary: `Spot.tags` remains the only answer to *which* spots carry a tag. A tag typed straight into a spot's form has no entry and falls back to `TagVocabulary.defaultIcon` until one is chosen in Settings.
 - **No sync.** Single-device only. The `@Model` still follows the CloudKit constraints in §9 so the option stays open.
 
 ```swift
@@ -127,6 +127,7 @@ Most screens sit behind a tap nothing outside the app can make. Every DEBUG laun
 | `-edit-first` | that spot's Edit sheet |
 | `-tags-first` | Settings → Tags |
 | `-new-tag-first` | Settings → Tags → New Tag |
+| `-icon-picker-first` | …→ its icon grid |
 | `-seed-samples` | nothing; fills the store first |
 
 `-seed-samples` fills the simulator's store with `Spot.samples`, which carry real Wikimedia images and real coordinates so the header image and map snapshot render. It is additive: a spot already in the store keeps everything it has and only gains the fields it was missing, so nothing you typed in the simulator is overwritten.
@@ -358,7 +359,7 @@ Monaka/
 │   ├── Spot+Period.swift           run interpretation, section assignment, countdown
 │   ├── Spot+Location.swift         coordinate accessors, distance
 │   ├── SpotDraft.swift             what every capture route produces, + PickedLocation
-│   ├── TagVocabulary.swift         @AppStorage names for tags not on a spot yet
+│   ├── TagVocabulary.swift         @AppStorage tag names + icons, §3
 │   └── Spot+Sample.swift           #if DEBUG preview fixtures
 ├── Service/
 │   ├── OGMetadataFetcher.swift     og:title / og:image / og:site_name
@@ -384,7 +385,8 @@ Monaka/
     └── Settings/
         ├── SettingsView.swift          sheet off the gear in the All tab, + SettingsRoute
         ├── TagsView.swift              the vocabulary: counts, rename, delete
-        ├── TagEditView.swift           name a new tag, or rename one
+        ├── TagEditView.swift           name a tag and pick its icon
+        ├── IconPickerView.swift        SF Symbol grid, ported from yomy
         ├── ImportView.swift            Takeout CSV picker + per-row preview
         └── AboutView.swift
 MonakaShare/                        share extension target (Phase 2)
