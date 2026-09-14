@@ -87,11 +87,12 @@ struct TodayView: View {
 
     /// Re-read on foreground so the countdowns don't go stale over midnight.
     @State private var today: Date = .now
+    @State private var path: [Spot] = []
 
     private var digest: TodayDigest { TodayDigest(spots: spots, on: today) }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if spots.isEmpty {
                     ContentUnavailableView(
@@ -112,6 +113,17 @@ struct TodayView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { today = .now }
         }
+        #if DEBUG
+        // §4 — the detail screen can't be reached from the launch state, so a
+        // launch argument pushes the featured spot for screenshots.
+        .onAppear {
+            guard ProcessInfo.processInfo.arguments.contains("-detail-first"),
+                  path.isEmpty,
+                  let spot = digest.featured?.spot
+            else { return }
+            path = [spot]
+        }
+        #endif
     }
 
     private var subtitle: String {

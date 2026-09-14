@@ -116,6 +116,14 @@ xcrun simctl launch booted com.shakshi.Monaka -tab-map    # or -tab-all
 xcrun simctl io booted screenshot /tmp/monaka.png
 ```
 
+`-detail-first` pushes the Today tab's featured spot so `SpotDetailView` — which no launch state reaches — can be screenshotted too.
+
+`-seed-samples` fills the simulator's store with `Spot.samples`, which carry real Wikimedia images and real coordinates so the header image and map snapshot render. It is additive: a spot already in the store keeps everything it has and only gains the fields it was missing, so nothing you typed in the simulator is overwritten.
+
+```bash
+xcrun simctl launch booted com.shakshi.Monaka -seed-samples -detail-first
+```
+
 If a build fails, read the output carefully and fix the errors before reporting back. Do not stop at the first error — fix as many as you can in one pass.
 
 ---
