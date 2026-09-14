@@ -12,18 +12,19 @@ import SwiftData
 
 struct TagsView: View {
     @Query private var spots: [Spot]
-    @AppStorage(TagVocabulary.storageKey) private var reservedTagsRaw = ""
+    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
 
     @State private var deleting: String?
 
-    /// In-use tags with how many spots carry them, plus the reserved names at
+    /// In-use tags with how many spots carry them, plus the named-only ones at
     /// zero. Alphabetical, so a tag doesn't move when its count changes.
-    private var tags: [(name: String, count: Int)] {
+    private var tags: [(name: String, icon: String, count: Int)] {
         let counts = Dictionary(grouping: spots.flatMap(\.tags), by: { $0 })
             .mapValues(\.count)
-        let names = Set(counts.keys).union(TagVocabulary.decode(reservedTagsRaw))
-        return names
-            .map { (name: $0, count: counts[$0] ?? 0) }
+        let entries = TagVocabulary.decode(vocabularyRaw)
+        let icons = Dictionary(entries.map { ($0.name, $0.icon) }, uniquingKeysWith: { first, _ in first })
+        return Set(counts.keys).union(icons.keys)
+            .map { (name: $0, icon: icons[$0] ?? TagVocabulary.defaultIcon, count: counts[$0] ?? 0) }
             .sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
     }
 
@@ -39,7 +40,7 @@ struct TagsView: View {
                 List {
                     Section {
                         ForEach(tags, id: \.name) { tag in
-                            row(name: tag.name, count: tag.count)
+                            row(name: tag.name, icon: tag.icon, count: tag.count)
                         }
                     } footer: {
                         Text("The number is how many spots carry the tag. Tap one to rename it everywhere it's used.")
@@ -73,11 +74,12 @@ struct TagsView: View {
         }
     }
 
-    private func row(name: String, count: Int) -> some View {
-        NavigationLink {
-            TagEditView(tag: name)
-        } label: {
-            HStack {
+    private func row(name: String, icon: String, count: Int) -> some View {
+        NavigationLink(value: SettingsRoute.renameTag(name)) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 24)
                 Text(name)
                 Spacer()
                 Text("\(count)")
@@ -91,14 +93,14 @@ struct TagsView: View {
         }
     }
 
-    /// Off every spot *and* out of the reserved list — a tag deleted here
-    /// should not come back as a suggestion.
+    /// Off every spot *and* out of the vocabulary — a tag deleted here should
+    /// not come back as a suggestion, or keep its icon if it's made again.
     private func delete(_ tag: String) {
         for spot in spots where spot.tags.contains(tag) {
             spot.tags.removeAll { $0 == tag }
         }
-        reservedTagsRaw = TagVocabulary.encode(
-            TagVocabulary.decode(reservedTagsRaw).filter { $0 != tag }
+        vocabularyRaw = TagVocabulary.encode(
+            TagVocabulary.decode(vocabularyRaw).filter { $0.name != tag }
         )
     }
 }

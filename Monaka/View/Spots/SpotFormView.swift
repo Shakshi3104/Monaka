@@ -19,7 +19,7 @@ struct SpotFormView: View {
 
     /// Every tag already in use, for the suggestion row.
     @Query private var spots: [Spot]
-    @AppStorage(TagVocabulary.storageKey) private var reservedTagsRaw = ""
+    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
 
     @State private var tagInput = ""
     @State private var isPickingLocation = false
@@ -243,7 +243,7 @@ struct SpotFormView: View {
     private var suggestions: [String] {
         let used = Set(draft.tags)
         var seen = Set<String>()
-        return (spots.flatMap(\.tags) + TagVocabulary.decode(reservedTagsRaw))
+        return (spots.flatMap(\.tags) + TagVocabulary.decode(vocabularyRaw).map(\.name))
             .filter { seen.insert($0).inserted && !used.contains($0) }
     }
 
@@ -270,10 +270,14 @@ struct SpotFormView: View {
             if !suggestions.isEmpty {
                 chipRow {
                     ForEach(suggestions, id: \.self) { tag in
-                        Button(tag) { addTag(tag) }
-                            .buttonStyle(.bordered)
-                            .buttonBorderShape(.capsule)
-                            .font(.caption)
+                        Button {
+                            addTag(tag)
+                        } label: {
+                            Label(tag, systemImage: TagVocabulary.icon(for: tag, in: vocabularyRaw))
+                        }
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.capsule)
+                        .font(.caption)
                     }
                 }
             }
@@ -401,7 +405,13 @@ struct SpotMapSnapshot: View {
 }
 
 struct TagChip: View {
+    /// Read here rather than passed in, so every caller picks the tag's icon up
+    /// without knowing the vocabulary exists.
+    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
+
     let tag: String
+    /// A trailing glyph for what the chip *does* — the `xmark` on a removable
+    /// one. Separate from the tag's own icon, which always leads.
     var systemImage: String?
 
     init(_ tag: String, systemImage: String? = nil) {
@@ -411,6 +421,8 @@ struct TagChip: View {
 
     var body: some View {
         HStack(spacing: 4) {
+            Image(systemName: TagVocabulary.icon(for: tag, in: vocabularyRaw))
+                .font(.caption2)
             Text(tag)
             if let systemImage {
                 Image(systemName: systemImage)
