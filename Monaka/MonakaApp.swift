@@ -21,6 +21,15 @@ struct MonakaApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                #if DEBUG
+                // §4 — `-seed-samples` fills a simulator store with the same
+                // spread the previews use. Additive: it never overwrites a spot
+                // that's already there.
+                .task {
+                    guard ProcessInfo.processInfo.arguments.contains("-seed-samples") else { return }
+                    Spot.seedSamples(into: modelContainer.mainContext)
+                }
+                #endif
         }
         .modelContainer(modelContainer)
     }
