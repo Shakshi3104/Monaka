@@ -8,6 +8,15 @@
 import SwiftUI
 import SwiftData
 
+/// Every screen inside the Settings sheet, addressed by value so a launch
+/// argument can open one directly (§4) — and so a widget or notification can
+/// later do the same without reaching into view state.
+enum SettingsRoute: Hashable {
+    case tags
+    case newTag
+    case renameTag(String)
+}
+
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -17,13 +26,19 @@ struct SettingsView: View {
 
     let locationProvider: LocationProvider
 
+    @State private var path: [SettingsRoute] = {
+        #if DEBUG
+        if DebugLaunchArgument.newTagScreen.isSet { return [.tags, .newTag] }
+        if DebugLaunchArgument.tagsScreen.isSet { return [.tags] }
+        #endif
+        return []
+    }()
+
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Form {
                 Section {
-                    NavigationLink {
-                        TagsView()
-                    } label: {
+                    NavigationLink(value: SettingsRoute.tags) {
                         Label("Tags", systemImage: "tag")
                     }
                 }
@@ -48,6 +63,13 @@ struct SettingsView: View {
                     case .authorized:
                         Text("Each section is ordered nearest first. Sections themselves still go by how much of the run is left.")
                     }
+                }
+            }
+            .navigationDestination(for: SettingsRoute.self) { route in
+                switch route {
+                case .tags: TagsView()
+                case .newTag: TagEditView()
+                case let .renameTag(tag): TagEditView(tag: tag)
                 }
             }
             .navigationTitle("Settings")

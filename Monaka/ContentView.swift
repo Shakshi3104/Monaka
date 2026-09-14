@@ -19,13 +19,21 @@ struct ContentView: View {
     /// argument opens straight into a tab for screenshots (§4).
     @State private var selection: AppTab = {
         #if DEBUG
-        let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains("-tab-map") { return .map }
-        if arguments.contains("-tab-all") { return .all }
+        if DebugLaunchArgument.tabMap.isSet { return .map }
+        // Settings hangs off the All tab, so -tags-first implies it.
+        if DebugLaunchArgument.tabAll.isSet
+            || DebugLaunchArgument.tagsScreen.isSet
+            || DebugLaunchArgument.newTagScreen.isSet { return .all }
         #endif
         return .today
     }()
-    @State private var isAddingSpot = false
+    @State private var isAddingSpot = {
+        #if DEBUG
+        DebugLaunchArgument.addSheet.isSet
+        #else
+        false
+        #endif
+    }()
 
     var body: some View {
         TabView(selection: $selection) {

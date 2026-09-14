@@ -49,7 +49,8 @@ No SPM dependencies. Everything the app needs is in the standard library + Swift
 - **A café saved in Google Maps is a spot with no run.** That's the entire difference. It's why §7.1 treats a missing run as a first-class case rather than incomplete data, and why the `Anytime` section exists.
 - **The run is two Optionals** (`startDate`, `endDate`), not a required range. See §7 for how the four combinations are interpreted.
 - **Coordinates are stored; nothing else about the place is.** `latitude` / `longitude` / `address` / `mapURL`. No Google API key, no Place ID, no cached tiles, no geocoding at import time.
-- **Tags are a plain `[String]`** on `Spot`, not a relationship and not a single category — an exhibition can be `Exhibition` + `Ends soon` + `Ueno` at once. Same call as `Feed.category` in yomy: renaming a tag does not retroactively update existing spots. The Add form suggests tags already in use so the vocabulary converges without a tag table.
+- **Tags are a plain `[String]`** on `Spot`, not a relationship and not a single category — an exhibition can be `Exhibition` + `Ends soon` + `Ueno` at once. Unlike `Feed.category` in yomy, there is no tag entity: the Add form suggests tags already in use so the vocabulary converges without a tag table, and `TagsView` rewrites every spot when one is renamed.
+- **A tag the user has named but not used yet lives in `TagVocabulary`** (`@AppStorage`), not SwiftData. Without a tag entity there is nowhere else for a zero-spot tag to exist, and setting a vocabulary up in advance is worth having. It stays strictly a list of names: `Spot.tags` remains the only answer to *which* spots carry a tag, and these names only widen the form's suggestions and fill out the Tags screen.
 - **No sync.** Single-device only. The `@Model` still follows the CloudKit constraints in §9 so the option stays open.
 
 ```swift
@@ -116,13 +117,25 @@ xcrun simctl launch booted com.shakshi.Monaka -tab-map    # or -tab-all
 xcrun simctl io booted screenshot /tmp/monaka.png
 ```
 
-`-detail-first` pushes the Today tab's featured spot so `SpotDetailView` — which no launch state reaches — can be screenshotted too.
+Most screens sit behind a tap nothing outside the app can make. Every DEBUG launch argument that opens one is declared in `DebugLaunchArguments.swift` — add new ones there rather than reaching for `ProcessInfo` inline.
+
+| Argument | Opens |
+|---|---|
+| `-tab-all` / `-tab-map` | that tab |
+| `-add-first` | the Add sheet |
+| `-detail-first` | the Today tab's featured spot |
+| `-edit-first` | that spot's Edit sheet |
+| `-tags-first` | Settings → Tags |
+| `-new-tag-first` | Settings → Tags → New Tag |
+| `-seed-samples` | nothing; fills the store first |
 
 `-seed-samples` fills the simulator's store with `Spot.samples`, which carry real Wikimedia images and real coordinates so the header image and map snapshot render. It is additive: a spot already in the store keeps everything it has and only gains the fields it was missing, so nothing you typed in the simulator is overwritten.
 
 ```bash
-xcrun simctl launch booted com.shakshi.Monaka -seed-samples -detail-first
+xcrun simctl launch booted com.shakshi.Monaka -seed-samples -edit-first
 ```
+
+The share extension's form is the one screen none of this reaches — it needs a real share sheet, so changes to `ShareFormView` can only be verified by hand.
 
 If a build fails, read the output carefully and fix the errors before reporting back. Do not stop at the first error — fix as many as you can in one pass.
 
@@ -336,6 +349,7 @@ Also: a synchronized folder can only belong to one target. These six files are t
 Monaka/
 ├── MonakaApp.swift                 entry point, ModelContainer from SharedStore
 ├── ContentView.swift               TabView root — Today / All / Map
+├── DebugLaunchArguments.swift      #if DEBUG, every -flag in §4
 ├── Info.plist
 ├── Monaka.entitlements             App Group
 ├── SharedStore.swift               App Group SwiftData container (duplicated in MonakaShare/)
@@ -344,6 +358,7 @@ Monaka/
 │   ├── Spot+Period.swift           run interpretation, section assignment, countdown
 │   ├── Spot+Location.swift         coordinate accessors, distance
 │   ├── SpotDraft.swift             what every capture route produces, + PickedLocation
+│   ├── TagVocabulary.swift         @AppStorage names for tags not on a spot yet
 │   └── Spot+Sample.swift           #if DEBUG preview fixtures
 ├── Service/
 │   ├── OGMetadataFetcher.swift     og:title / og:image / og:site_name
@@ -367,8 +382,9 @@ Monaka/
     ├── Calendar/
     │   └── CalendarView.swift      month grid with run bars (Phase 4)
     └── Settings/
-        ├── SettingsView.swift          sheet off the gear in the All tab
-        ├── TagsView.swift              rename / delete tags across spots
+        ├── SettingsView.swift          sheet off the gear in the All tab, + SettingsRoute
+        ├── TagsView.swift              the vocabulary: counts, rename, delete
+        ├── TagEditView.swift           name a new tag, or rename one
         ├── ImportView.swift            Takeout CSV picker + per-row preview
         └── AboutView.swift
 MonakaShare/                        share extension target (Phase 2)

@@ -18,6 +18,11 @@ struct AddSpotView: View {
 
     @State private var form = SpotDraft()
     @State private var hasLoadedDraft = false
+    @State private var isConfirmingDiscard = false
+
+    /// Anything beyond what the capture route already filled in is the user's
+    /// own typing, and worth asking about before it's thrown away.
+    private var hasChanges: Bool { form != draft }
 
     var body: some View {
         NavigationStack {
@@ -26,13 +31,16 @@ struct AddSpotView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
+                        Button("Cancel") {
+                            if hasChanges { isConfirmingDiscard = true } else { dismiss() }
+                        }
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") { save() }
                             .disabled(!form.isAddable)
                     }
                 }
+                .discardChangesGuard(hasChanges: hasChanges, isPresented: $isConfirmingDiscard)
                 .onAppear {
                     guard !hasLoadedDraft else { return }
                     hasLoadedDraft = true

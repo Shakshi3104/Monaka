@@ -24,7 +24,14 @@ struct SpotListView: View {
     @State private var locationProvider = LocationProvider()
     @State private var today: Date = .now
     @State private var selectedTag: String?
-    @State private var isShowingSettings = false
+    /// §4 — Settings is a sheet off a gear nothing outside the app can tap.
+    @State private var isShowingSettings = {
+        #if DEBUG
+        DebugLaunchArgument.tagsScreen.isSet || DebugLaunchArgument.newTagScreen.isSet
+        #else
+        false
+        #endif
+    }()
 
     private static let anytimeCollapseThreshold = 8
 

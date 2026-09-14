@@ -19,26 +19,36 @@ struct SpotFormView: View {
 
     /// Every tag already in use, for the suggestion row.
     @Query private var spots: [Spot]
+    @AppStorage(TagVocabulary.storageKey) private var reservedTagsRaw = ""
 
     @State private var tagInput = ""
     @State private var isPickingLocation = false
     @State private var isFetchingMetadata = false
 
+    @FocusState private var isURLFocused: Bool
+    /// The URL the last fetch ran against, so tapping into the field and back
+    /// out doesn't re-request a page nothing has changed about.
+    @State private var lastFetchedURL = ""
+
     var body: some View {
         Form {
-            Section {
+            Section("Spot") {
                 TextField("Title", text: $draft.title)
                 TextField("Venue", text: $draft.venue)
             }
+
+            // Directly under the fields it fills. It used to sit below Tags,
+            // which put the paste-a-URL route — the one §8 calls the main path —
+            // at the bottom of the form, under everything it was meant to save
+            // you from typing.
+            linkSection
 
             locationSection
             runSection
             tagSection
 
-            linkSection
-
             Section("Notes") {
-                TextField("Notes", text: $draft.notes, axis: .vertical)
+                TextField("Closed Mondays, book ahead…", text: $draft.notes, axis: .vertical)
                     .lineLimit(3...8)
             }
         }
@@ -57,68 +67,57 @@ struct SpotFormView: View {
 
     // MARK: - Link + OGP autofill
 
+    /// One field with one control at its trailing edge, the way iOS puts a
+    /// clear or reload button in a text field — rather than a row of floating
+    /// capsules, which a grouped form has no vocabulary for.
+    ///
+    /// The control is whatever the field needs next: paste into it while it's
+    /// empty, re-read the page once there's a URL in it.
     private var linkSection: some View {
         Section {
-            HStack {
+            HStack(spacing: 8) {
                 TextField("https://", text: $draft.urlString)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
                     .submitLabel(.done)
+                    .focused($isURLFocused)
                     .onSubmit { Task { await autofill() } }
+
                 if isFetchingMetadata {
                     ProgressView()
-                }
-            }
-
-            HStack {
-                PasteButton(payloadType: URL.self) { urls in
-                    guard let url = urls.first else { return }
-                    draft.urlString = url.absoluteString
-                    Task { await autofill() }
-                }
-                .buttonBorderShape(.capsule)
-                .labelStyle(.titleAndIcon)
-
-                Spacer()
-
-                if !draft.urlString.isEmpty {
-                    Button("Fetch Info") { Task { await autofill() } }
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.capsule)
-                        .font(.caption)
-                        .disabled(isFetchingMetadata)
+                } else if draft.urlString.isEmpty {
+                    PasteButton(payloadType: URL.self) { urls in
+                        guard let url = urls.first else { return }
+                        draft.urlString = url.absoluteString
+                        Task { await autofill() }
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonBorderShape(.capsule)
+                } else {
+                    Button("Read the Page Again", systemImage: "arrow.clockwise") {
+                        Task { await autofill() }
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
                 }
             }
 
             if let imageURL = draft.imageURL, let url = URL(string: imageURL) {
-                HStack(spacing: 12) {
-                    AsyncImage(url: url) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        Color(.tertiarySystemFill)
-                    }
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                    Text("Image from the page")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Button("Remove", systemImage: "xmark.circle.fill") {
-                        draft.imageURL = nil
-                    }
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(.secondary)
-                    .buttonStyle(.plain)
-                }
+                SpotImagePreview(url: url) { draft.imageURL = nil }
             }
         } header: {
             Text("Link")
         } footer: {
             Text("Fills in the title, image and venue from the page. Dates are always typed by hand.")
+        }
+        // Leaving the field is as clear a "that's the URL" as hitting Return,
+        // and it's what a paste-then-tap-away actually does.
+        .onChange(of: isURLFocused) { _, focused in
+            guard !focused, !draft.urlString.isEmpty,
+                  draft.urlString != lastFetchedURL
+            else { return }
+            Task { await autofill() }
         }
     }
 
@@ -130,6 +129,7 @@ struct SpotFormView: View {
         else { return }
 
         isFetchingMetadata = true
+        lastFetchedURL = draft.urlString
         defer { isFetchingMetadata = false }
 
         // Through the dispatcher, so a pasted Google Maps link fills the
@@ -144,34 +144,21 @@ struct SpotFormView: View {
     private var locationSection: some View {
         Section {
             if let location = draft.location {
+                // Just the map. The marker already carries the name, and on
+                // Edit that name is rebuilt from `venue` — so a row above it
+                // repeated the Venue field two rows up, word for word.
                 Button {
                     isPickingLocation = true
                 } label: {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(location.name)
-                                    .foregroundStyle(.primary)
-                                if let address = location.address {
-                                    Text(address)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(2)
-                                }
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-
-                        SpotMapSnapshot(
-                            coordinate: location.coordinate,
-                            title: location.name
-                        )
-                        .frame(height: 120)
-                    }
+                    SpotMapSnapshot(
+                        coordinate: location.coordinate,
+                        title: location.name,
+                        cornerRadius: 0
+                    )
+                    .frame(height: 150)
                 }
+                .buttonStyle(.plain)
+                .listRowInsets(EdgeInsets())
             } else {
                 Button {
                     isPickingLocation = true
@@ -182,7 +169,17 @@ struct SpotFormView: View {
         } header: {
             Text("Location")
         } footer: {
-            if draft.location == nil {
+            if let location = draft.location {
+                // The address stays, but as a footer rather than a row: it is
+                // the only thing that tells two branches of the same shop
+                // apart, and the map can't.
+                VStack(alignment: .leading, spacing: 2) {
+                    if let address = location.address {
+                        Text(address)
+                    }
+                    Text("Tap the map to change it.")
+                }
+            } else {
                 Text(requiresLocation
                      ? "Required. Pin the spot so it shows up on the Map tab."
                      : "Not pinned yet, so it won't show up on the Map tab.")
@@ -195,14 +192,14 @@ struct SpotFormView: View {
     private var hasStartDate: Binding<Bool> {
         Binding(
             get: { draft.startDate != nil },
-            set: { draft.startDate = $0 ? (draft.startDate ?? .now) : nil }
+            set: { draft.runStart = $0 ? (draft.startDate ?? .now) : nil }
         )
     }
 
     private var hasEndDate: Binding<Bool> {
         Binding(
             get: { draft.endDate != nil },
-            set: { draft.endDate = $0 ? (draft.endDate ?? .now) : nil }
+            set: { draft.runEnd = $0 ? (draft.endDate ?? .now) : nil }
         )
     }
 
@@ -210,11 +207,13 @@ struct SpotFormView: View {
         Section {
             Toggle("Start date", isOn: hasStartDate)
             if draft.startDate != nil {
+                // Through `runStart`, so pushing the start past the end drags
+                // the end along instead of leaving a backwards run.
                 DatePicker(
                     "Starts",
                     selection: Binding(
                         get: { draft.startDate ?? .now },
-                        set: { draft.startDate = $0 }
+                        set: { draft.runStart = $0 }
                     ),
                     displayedComponents: .date
                 )
@@ -225,7 +224,7 @@ struct SpotFormView: View {
                     "Ends",
                     selection: Binding(
                         get: { draft.endDate ?? .now },
-                        set: { draft.endDate = $0 }
+                        set: { draft.runEnd = $0 }
                     ),
                     displayedComponents: .date
                 )
@@ -233,27 +232,19 @@ struct SpotFormView: View {
         } header: {
             Text("Run")
         } footer: {
-            Text(runFooter)
-        }
-    }
-
-    /// Spells out the §7.1 interpretation of whichever dates are set.
-    private var runFooter: String {
-        switch (draft.startDate != nil, draft.endDate != nil) {
-        case (true, true): "Open during this period."
-        case (false, true): "Open until the end date."
-        case (true, false): "Open from the start date, no end announced."
-        case (false, false): "No dates — the spot lands in Anytime and is always available."
+            Text(draft.runFooter)
         }
     }
 
     // MARK: - Tags
 
-    /// Tags already in use elsewhere, minus the ones on this draft.
+    /// Tags already in use elsewhere plus the ones named in Settings but not
+    /// yet put on anything, minus the ones already on this draft.
     private var suggestions: [String] {
         let used = Set(draft.tags)
         var seen = Set<String>()
-        return spots.flatMap(\.tags).filter { seen.insert($0).inserted && !used.contains($0) }
+        return (spots.flatMap(\.tags) + TagVocabulary.decode(reservedTagsRaw))
+            .filter { seen.insert($0).inserted && !used.contains($0) }
     }
 
     private var tagSection: some View {
@@ -310,7 +301,76 @@ struct SpotFormView: View {
     }
 }
 
+// MARK: - Discard guard
+
+extension View {
+    /// The system behaviour for an edited form sheet: swipe-to-dismiss is
+    /// blocked while there is something to lose, and Cancel asks first.
+    ///
+    /// SwiftUI gives no hook to *intercept* the swipe and ask, so it is
+    /// disabled outright rather than silently throwing the edits away.
+    func discardChangesGuard(hasChanges: Bool, isPresented: Binding<Bool>) -> some View {
+        interactiveDismissDisabled(hasChanges)
+            .confirmationDialog(
+                "Discard Changes?",
+                isPresented: isPresented,
+                titleVisibility: .visible
+            ) {
+                DiscardChangesButtons()
+            } message: {
+                Text("What you typed here won't be saved.")
+            }
+    }
+}
+
+/// Its own view so `dismiss` resolves against the sheet the dialog was
+/// attached to rather than whatever presented it.
+struct DiscardChangesButtons: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        Button("Discard Changes", role: .destructive) { dismiss() }
+        Button("Keep Editing", role: .cancel) {}
+    }
+}
+
 // MARK: - Shared pieces
+
+/// The image the OGP fetch found, so you can see which page was read before
+/// saving — and drop it if it grabbed the site's logo instead of the poster.
+struct SpotImagePreview: View {
+    let url: URL
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            AsyncImage(url: url) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Color(.tertiarySystemFill)
+                    .overlay { ProgressView() }
+            }
+            .frame(width: 56, height: 56)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Image from the page")
+                    .font(.subheadline)
+                Text(url.host() ?? url.absoluteString)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Button("Remove Image", systemImage: "xmark.circle.fill", action: onRemove)
+                .labelStyle(.iconOnly)
+                .foregroundStyle(.secondary)
+                .buttonStyle(.plain)
+        }
+    }
+}
 
 /// A non-interactive map showing one pin.
 ///

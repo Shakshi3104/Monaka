@@ -2,9 +2,9 @@
 //  TagsView.swift
 //  Monaka
 //
-//  Rename or delete a tag across every spot carrying it. Tags are plain
-//  strings on `Spot` (§3), so this is the only place the vocabulary can be
-//  tidied up after the fact.
+//  The tag vocabulary: what's in use, what's only been named, and the one
+//  place either can be renamed or dropped. Tags are plain strings on `Spot`
+//  (§3), so a rename here rewrites every spot carrying it.
 //
 
 import SwiftUI
@@ -12,15 +12,18 @@ import SwiftData
 
 struct TagsView: View {
     @Query private var spots: [Spot]
+    @AppStorage(TagVocabulary.storageKey) private var reservedTagsRaw = ""
 
-    @State private var renaming: String?
-    @State private var newName = ""
     @State private var deleting: String?
 
-    /// Every tag in use, alphabetical, with how many spots carry it.
+    /// In-use tags with how many spots carry them, plus the reserved names at
+    /// zero. Alphabetical, so a tag doesn't move when its count changes.
     private var tags: [(name: String, count: Int)] {
-        Dictionary(grouping: spots.flatMap(\.tags), by: { $0 })
-            .map { (name: $0.key, count: $0.value.count) }
+        let counts = Dictionary(grouping: spots.flatMap(\.tags), by: { $0 })
+            .mapValues(\.count)
+        let names = Set(counts.keys).union(TagVocabulary.decode(reservedTagsRaw))
+        return names
+            .map { (name: $0, count: counts[$0] ?? 0) }
             .sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
     }
 
@@ -30,7 +33,7 @@ struct TagsView: View {
                 ContentUnavailableView(
                     "No Tags Yet",
                     systemImage: "tag",
-                    description: Text("Tags you add to a spot will show up here.")
+                    description: Text("Add one here, or type one straight into a spot's form.")
                 )
             } else {
                 List {
@@ -39,23 +42,19 @@ struct TagsView: View {
                             row(name: tag.name, count: tag.count)
                         }
                     } footer: {
-                        Text("Tap a tag to rename it everywhere it's used.")
+                        Text("The number is how many spots carry the tag. Tap one to rename it everywhere it's used.")
                     }
                 }
             }
         }
         .navigationTitle("Tags")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Rename Tag", isPresented: Binding(
-            get: { renaming != nil },
-            set: { if !$0 { renaming = nil } }
-        )) {
-            TextField("Tag", text: $newName)
-            Button("Rename") {
-                if let renaming { rename(renaming, to: newName) }
-                renaming = nil
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                NavigationLink(value: SettingsRoute.newTag) {
+                    Label("New Tag", systemImage: "plus")
+                }
             }
-            Button("Cancel", role: .cancel) { renaming = nil }
         }
         // Deleting a tag touches every spot carrying it, so it confirms (§6.1).
         .alert("Delete Tag?", isPresented: Binding(
@@ -75,16 +74,15 @@ struct TagsView: View {
     }
 
     private func row(name: String, count: Int) -> some View {
-        HStack {
-            Text(name)
-            Spacer()
-            Text("\(count)")
-                .foregroundStyle(.secondary)
-        }
-        .contentShape(.rect)
-        .onTapGesture {
-            newName = name
-            renaming = name
+        NavigationLink {
+            TagEditView(tag: name)
+        } label: {
+            HStack {
+                Text(name)
+                Spacer()
+                Text("\(count)")
+                    .foregroundStyle(count == 0 ? .tertiary : .secondary)
+            }
         }
         .swipeActions(edge: .trailing) {
             Button("Delete", systemImage: "trash", role: .destructive) {
@@ -93,21 +91,15 @@ struct TagsView: View {
         }
     }
 
-    private func rename(_ tag: String, to name: String) {
-        guard let trimmed = name.nilIfBlank, trimmed != tag else { return }
-        for spot in spots where spot.tags.contains(tag) {
-            // Merging into an existing tag must not leave a duplicate behind.
-            var tags = spot.tags.map { $0 == tag ? trimmed : $0 }
-            var seen = Set<String>()
-            tags = tags.filter { seen.insert($0).inserted }
-            spot.tags = tags
-        }
-    }
-
+    /// Off every spot *and* out of the reserved list — a tag deleted here
+    /// should not come back as a suggestion.
     private func delete(_ tag: String) {
         for spot in spots where spot.tags.contains(tag) {
             spot.tags.removeAll { $0 == tag }
         }
+        reservedTagsRaw = TagVocabulary.encode(
+            TagVocabulary.decode(reservedTagsRaw).filter { $0 != tag }
+        )
     }
 }
 

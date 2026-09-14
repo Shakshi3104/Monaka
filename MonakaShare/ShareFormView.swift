@@ -38,18 +38,20 @@ struct ShareFormView: View {
                     }
                 }
 
+                sourceSection
                 runSection
 
-                Section("Notes") {
-                    TextField("Notes", text: $draft.notes, axis: .vertical)
+                Section {
+                    TextField("Closed Mondays, book ahead…", text: $draft.notes, axis: .vertical)
                         .lineLimit(2...5)
-                }
-
-                if draft.location == nil {
-                    Section {
-                        Label("No location yet — pin it in Monaka later.", systemImage: "mappin.slash")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                } header: {
+                    Text("Notes")
+                } footer: {
+                    if draft.location == nil {
+                        Label(
+                            "No location yet — pin it in Monaka to put it on the Map tab.",
+                            systemImage: "mappin.slash"
+                        )
                     }
                 }
             }
@@ -78,34 +80,75 @@ struct ShareFormView: View {
         }
     }
 
+    // MARK: - What was captured
+
+    /// What the resolver actually read, so you can tell a page that gave up its
+    /// poster from one that handed over a logo — the only check available here,
+    /// since the extension has no map picker to fall back on.
+    @ViewBuilder
+    private var sourceSection: some View {
+        if let imageURL = draft.imageURL, let url = URL(string: imageURL) {
+            Section("From the Page") {
+                HStack(spacing: 12) {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Color(.tertiarySystemFill)
+                            .overlay { ProgressView() }
+                    }
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    Text(draft.urlString.isEmpty
+                         ? "Image from the page"
+                         : URL(string: draft.urlString)?.host() ?? draft.urlString)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    Button("Remove Image", systemImage: "xmark.circle.fill") {
+                        draft.imageURL = nil
+                    }
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
     // MARK: - Run
 
     private var runSection: some View {
         Section {
             Toggle("Start date", isOn: Binding(
                 get: { draft.startDate != nil },
-                set: { draft.startDate = $0 ? (draft.startDate ?? .now) : nil }
+                set: { draft.runStart = $0 ? (draft.startDate ?? .now) : nil }
             ))
             if draft.startDate != nil {
+                // Through `runStart` / `runEnd`, so the two ends can't end up
+                // the wrong way round.
                 DatePicker(
                     "Starts",
                     selection: Binding(
                         get: { draft.startDate ?? .now },
-                        set: { draft.startDate = $0 }
+                        set: { draft.runStart = $0 }
                     ),
                     displayedComponents: .date
                 )
             }
             Toggle("End date", isOn: Binding(
                 get: { draft.endDate != nil },
-                set: { draft.endDate = $0 ? (draft.endDate ?? .now) : nil }
+                set: { draft.runEnd = $0 ? (draft.endDate ?? .now) : nil }
             ))
             if draft.endDate != nil {
                 DatePicker(
                     "Ends",
                     selection: Binding(
                         get: { draft.endDate ?? .now },
-                        set: { draft.endDate = $0 }
+                        set: { draft.runEnd = $0 }
                     ),
                     displayedComponents: .date
                 )
@@ -113,7 +156,7 @@ struct ShareFormView: View {
         } header: {
             Text("Run")
         } footer: {
-            Text("No dates means the spot is always available.")
+            Text(draft.runFooter)
         }
     }
 

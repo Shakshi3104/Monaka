@@ -36,9 +36,9 @@ struct SpotDetailView: View {
     }
 
     /// A place saved from Google Maps often has the venue equal to the title;
-    /// repeating it under the nav title says nothing.
-    private var subtitle: String {
-        guard let venue = spot.venue?.nilIfBlank, venue != spot.title else { return "" }
+    /// showing it twice says nothing.
+    private var venue: String? {
+        guard let venue = spot.venue?.nilIfBlank, venue != spot.title else { return nil }
         return venue
     }
 
@@ -50,13 +50,15 @@ struct SpotDetailView: View {
             if pageURL != nil { linkSection }
             if let notes = spot.notes?.nilIfBlank { notesSection(notes) }
             if !spot.tags.isEmpty { tagSection }
-            addedFooter
         }
         .listStyle(.insetGrouped)
         // The title is the large nav title, not a second heading in the body —
         // it collapses to inline on scroll the way every system detail does.
+        //
+        // No `navigationSubtitle`: the two screens that use one put *context*
+        // there (today's date, the active tag filter), which is how the system
+        // uses it. A venue is content, so it belongs in the body.
         .navigationTitle(spot.title)
-        .navigationSubtitle(subtitle)
         // A bar, not a plain inset: the list fades out under it instead of
         // colliding with the map snapshot halfway through a scroll.
         .safeAreaBar(edge: .bottom) { visitedBar }
@@ -82,6 +84,11 @@ struct SpotDetailView: View {
         .sheet(isPresented: $isEditing) {
             EditSpotView(spot: spot)
         }
+        #if DEBUG
+        // §4 — the Edit sheet opens from a toolbar menu nothing outside the app
+        // can reach.
+        .onAppear { if DebugLaunchArgument.editSheet.isSet { isEditing = true } }
+        #endif
         // §6.1 — destructive actions in the detail view confirm via .alert.
         .alert("Delete Spot?", isPresented: $isConfirmingDelete) {
             Button("Delete", role: .destructive) {
@@ -97,17 +104,15 @@ struct SpotDetailView: View {
     // MARK: - Header
 
     /// Floats above the grouped sections rather than sitting in a card of its
-    /// own — the Contacts pattern. Title and venue live in the nav bar, so this
-    /// carries only the image and how much run is left.
+    /// own — the Contacts pattern. The title is the nav title; this carries the
+    /// image, the venue and how much run is left.
     @ViewBuilder
     private var header: some View {
-        if spot.imageURL != nil || countdown.text != nil {
+        if spot.imageURL != nil || venue != nil || countdown.text != nil {
             Section {
                 VStack(alignment: .leading, spacing: 10) {
                     headerImage
-                    if let text = countdown.text {
-                        statusPill(text)
-                    }
+                    metadataLine
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 12, trailing: 0))
@@ -136,14 +141,31 @@ struct SpotDetailView: View {
         }
     }
 
-    private func statusPill(_ text: String) -> some View {
-        let tint = countdown.emphasis.color
-        return Label(text, systemImage: countdown.symbolName)
-            .font(.footnote.weight(.medium))
-            .foregroundStyle(tint)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(tint.opacity(0.12), in: .capsule)
+    /// `東京都美術館 · 1 day left` — one line, the countdown carrying the only
+    /// colour. No icons and no capsule: stacking a label against a padded pill
+    /// left their text on two different margins and read as two designs.
+    @ViewBuilder
+    private var metadataLine: some View {
+        if venue != nil || countdown.text != nil {
+            HStack(spacing: 6) {
+                if let venue {
+                    Text(venue)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                if venue != nil, countdown.text != nil {
+                    Text("·")
+                        .foregroundStyle(.tertiary)
+                }
+                if let text = countdown.text {
+                    Text(text)
+                        .fontWeight(.medium)
+                        .foregroundStyle(countdown.emphasis.color)
+                        .fixedSize()
+                }
+            }
+            .font(.subheadline)
+        }
     }
 
     // MARK: - Run
@@ -275,15 +297,6 @@ struct SpotDetailView: View {
         }
     }
 
-    private var addedFooter: some View {
-        Section {
-            EmptyView()
-        } footer: {
-            Text("Added \(DateFormatter.monakaDate.string(from: spot.addedAt))")
-                .frame(maxWidth: .infinity, alignment: .center)
-        }
-    }
-
     // MARK: - Visited
 
     /// Floats over the list instead of scrolling away at the bottom of it —
@@ -306,21 +319,6 @@ struct SpotDetailView: View {
         .padding(.horizontal, 20)
         .padding(.bottom, 14)
         .sensoryFeedback(.success, trigger: spot.isVisited) { _, visited in visited }
-    }
-}
-
-// MARK: - Countdown glyph
-
-extension Spot.Countdown {
-    /// The symbol that leads the status pill.
-    var symbolName: String {
-        switch self {
-        case .visited: "checkmark.circle.fill"
-        case .endsToday, .daysLeft: "hourglass"
-        case .startsToday, .startsIn: "calendar"
-        case .ended: "xmark.circle"
-        case .none: "mappin.and.ellipse"
-        }
     }
 }
 
