@@ -28,7 +28,9 @@ struct SettingsView: View {
 
     @State private var path: [SettingsRoute] = {
         #if DEBUG
-        if DebugLaunchArgument.newTagScreen.isSet { return [.tags, .newTag] }
+        if DebugLaunchArgument.newTagScreen.isSet || DebugLaunchArgument.iconPicker.isSet {
+            return [.tags, .newTag]
+        }
         if DebugLaunchArgument.tagsScreen.isSet { return [.tags] }
         #endif
         return []

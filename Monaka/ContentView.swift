@@ -23,7 +23,8 @@ struct ContentView: View {
         // Settings hangs off the All tab, so -tags-first implies it.
         if DebugLaunchArgument.tabAll.isSet
             || DebugLaunchArgument.tagsScreen.isSet
-            || DebugLaunchArgument.newTagScreen.isSet { return .all }
+            || DebugLaunchArgument.newTagScreen.isSet
+            || DebugLaunchArgument.iconPicker.isSet { return .all }
         #endif
         return .today
     }()

@@ -29,6 +29,8 @@ enum DebugLaunchArgument: String, CaseIterable {
     case tagsScreen = "-tags-first"
     /// …and one further, to the New Tag screen.
     case newTagScreen = "-new-tag-first"
+    /// …and one further still, to its icon grid. Implies `-new-tag-first`.
+    case iconPicker = "-icon-picker-first"
 
     /// Fill the store with `Spot.samples`, additively.
     case seedSamples = "-seed-samples"
