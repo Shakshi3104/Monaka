@@ -104,8 +104,15 @@ struct TodayView: View {
                     content
                 }
             }
-            .navigationTitle("Today")
-            .navigationSubtitle(subtitle)
+            // The tab bar already says "Today"; the title says *which* today.
+            // The open count under it is the first section's header, not
+            // `.navigationSubtitle`: SwiftUI draws that slot as a light
+            // footnote and ignores any font set on the `Text` handed to it, so
+            // it reads as a caption rather than as the screen's headline
+            // number. (`UINavigationBarAppearance.largeSubtitleTextAttributes`
+            // can restyle it, but setting the appearance proxy from
+            // `MonakaApp.init()` drops the azuki accent colour app-wide.)
+            .navigationTitle(DateFormatter.monakaTodayDate.string(from: today))
             .navigationDestination(for: Spot.self) { spot in
                 SpotDetailView(spot: spot)
             }
@@ -126,16 +133,10 @@ struct TodayView: View {
         #endif
     }
 
-    private var subtitle: String {
-        let day = DateFormatter.monakaDate.string(from: today)
-        let weekday = DateFormatter.monakaWeekday.string(from: today)
-        return "\(day) \(weekday)"
-    }
-
     private var content: some View {
         List {
-            if let featured = digest.featured {
-                Section {
+            Section {
+                if let featured = digest.featured {
                     NavigationLink(value: featured.spot) {
                         FeaturedSpotCard(featured: featured, date: today)
                     }
@@ -146,9 +147,21 @@ struct TodayView: View {
                     .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 12, trailing: 0))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                } header: {
-                    Text(openCountText)
                 }
+            } header: {
+                // A section header sits tight under the large title, which is
+                // the position a subtitle wants. Photos sets an album's count
+                // there in this weight — not the uppercase grey a header
+                // defaults to, and not the footnote `.navigationSubtitle` draws.
+                Text(openCountText)
+                    .font(.subheadline.weight(.semibold))
+                    // `.primary` inside a header resolves to the header's own
+                    // grey, so the label colour has to be named outright.
+                    .foregroundStyle(Color(uiColor: .label))
+                    .textCase(nil)
+                    // Headers indent past the title above them; zero the
+                    // leading inset so the two share a left edge.
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 6, trailing: 0))
             }
 
             ForEach(digest.sections, id: \.section) { section, spots in
