@@ -49,6 +49,12 @@ struct SpotDraft: Equatable {
         }
     }
 
+    /// What an end switched on in the form starts at: today, unless that would
+    /// reverse the run and drag the end the user just typed back with it.
+    var defaultRunStart: Date { min(endDate ?? .now, .now) }
+
+    var defaultRunEnd: Date { max(startDate ?? .now, .now) }
+
     /// What a spot actually needs. Editing requires only this — a spot
     /// captured through the share sheet has no location (§8.1), and demanding
     /// one here would make it impossible to correct anything about it,

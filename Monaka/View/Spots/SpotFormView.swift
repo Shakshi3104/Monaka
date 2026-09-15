@@ -192,14 +192,14 @@ struct SpotFormView: View {
     private var hasStartDate: Binding<Bool> {
         Binding(
             get: { draft.startDate != nil },
-            set: { draft.runStart = $0 ? (draft.startDate ?? .now) : nil }
+            set: { draft.runStart = $0 ? (draft.startDate ?? draft.defaultRunStart) : nil }
         )
     }
 
     private var hasEndDate: Binding<Bool> {
         Binding(
             get: { draft.endDate != nil },
-            set: { draft.runEnd = $0 ? (draft.endDate ?? .now) : nil }
+            set: { draft.runEnd = $0 ? (draft.endDate ?? draft.defaultRunEnd) : nil }
         )
     }
 
