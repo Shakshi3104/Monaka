@@ -125,7 +125,7 @@ struct ShareFormView: View {
         Section {
             Toggle("Start date", isOn: Binding(
                 get: { draft.startDate != nil },
-                set: { draft.runStart = $0 ? (draft.startDate ?? .now) : nil }
+                set: { draft.runStart = $0 ? (draft.startDate ?? draft.defaultRunStart) : nil }
             ))
             if draft.startDate != nil {
                 // Through `runStart` / `runEnd`, so the two ends can't end up
@@ -141,7 +141,7 @@ struct ShareFormView: View {
             }
             Toggle("End date", isOn: Binding(
                 get: { draft.endDate != nil },
-                set: { draft.runEnd = $0 ? (draft.endDate ?? .now) : nil }
+                set: { draft.runEnd = $0 ? (draft.endDate ?? draft.defaultRunEnd) : nil }
             ))
             if draft.endDate != nil {
                 DatePicker(
