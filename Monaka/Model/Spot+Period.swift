@@ -357,11 +357,12 @@ extension DateFormatter {
 
     /// `2026/04/11`
     static let monakaDate = monaka("yyyy/MM/dd")
-    /// `Saturday`
-    static let monakaWeekday = monaka("EEEE")
-    /// `2026/04/11 Sat` — the §6.1 format plus the day of the week, which is
+    /// `2026/04/11 (Sat)` — the §6.1 format plus the day of the week, which is
     /// what you actually plan a visit around.
     static let monakaDateWithWeekday = monaka("yyyy/MM/dd (E)")
+    /// `04/11 (Sat)` — only for *today*, where the year is never in question.
+    /// Anything describing a run keeps the full §6.1 format.
+    static let monakaTodayDate = monaka("MM/dd (E)")
 }
 
 extension Spot {
