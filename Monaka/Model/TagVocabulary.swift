@@ -62,4 +62,20 @@ enum TagVocabulary {
     static func icon(for name: String, in raw: String) -> String {
         decode(raw).first { $0.name == name }?.icon ?? defaultIcon
     }
+
+    /// The symbol a spot's tags ask for, or `nil` when none of them has one.
+    ///
+    /// Later tags win: the most recently added tag is the one saying what the
+    /// spot has just become. A tag with no entry, or one whose entry never got
+    /// past `defaultIcon`, is skipped — it has nothing to say, and letting it
+    /// through would flatten a whole map to identical `tag` pins.
+    static func chosenIcon(forLastOf names: [String], in raw: String) -> String? {
+        let entries = decode(raw)
+        for name in names.reversed() {
+            if let icon = entries.first(where: { $0.name == name })?.icon, icon != defaultIcon {
+                return icon
+            }
+        }
+        return nil
+    }
 }

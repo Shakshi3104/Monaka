@@ -19,6 +19,7 @@ struct SpotMapView: View {
 
     @AppStorage("mapShowsVisited") private var showsVisited = false
     @AppStorage("mapShowsEnded") private var showsEnded = false
+    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
 
     @State private var camera: MapCameraPosition = .automatic
     @State private var selectedSpotID: UUID?
@@ -132,8 +133,14 @@ struct SpotMapView: View {
         }
     }
 
+    /// A tag's own symbol says more than "has a run / doesn't" — a `Ramen` pin
+    /// and a `Museum` pin are the whole reason to look at this tab. Visited
+    /// keeps its checkmark: there, "been" outranks what kind of place it is.
     private func icon(for spot: Spot) -> String {
         if spot.isVisited { return "checkmark" }
+        if let tagged = TagVocabulary.chosenIcon(forLastOf: spot.tags, in: vocabularyRaw) {
+            return tagged
+        }
         return spot.hasRun ? "ticket.fill" : "cup.and.saucer.fill"
     }
 
