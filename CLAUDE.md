@@ -347,6 +347,7 @@ Also: a synchronized folder can only belong to one target. These six files are t
 ## 11. Project Structure
 
 ```
+AppIcon.icon/                       Icon Composer bundle, referenced from the project root
 Monaka/
 ├── MonakaApp.swift                 entry point, ModelContainer from SharedStore
 ├── ContentView.swift               TabView root — Today / All / Map
@@ -441,7 +442,8 @@ MonakaShare/                        share extension target (Phase 2)
 ### Phase 4 — Beyond
 - [ ] `CalendarView` (month grid with run bars)
 - [ ] Photos taken on the visit
-- [ ] App icon (round monaka = full moon), About with the name's origin
+- [x] App icon — `AppIcon.icon` (Icon Composer): a warm-tinted full moon on a night sky, the moon the wafer was likened to
+- [ ] About with the name's origin
 
 Update this section as you complete items.
 
