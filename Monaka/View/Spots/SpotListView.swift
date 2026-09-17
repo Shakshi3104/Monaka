@@ -164,7 +164,9 @@ struct SpotListView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     SpotListView()
         .modelContainer(Spot.previewContainer)
 }
+#endif

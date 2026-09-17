@@ -155,6 +155,7 @@ struct TagEditView: View {
     }
 }
 
+#if DEBUG
 #Preview("New") {
     NavigationStack {
         TagEditView()
@@ -168,3 +169,4 @@ struct TagEditView: View {
     }
     .modelContainer(Spot.previewContainer)
 }
+#endif

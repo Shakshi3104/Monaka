@@ -88,7 +88,9 @@ struct SettingsView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     SettingsView(locationProvider: LocationProvider())
         .modelContainer(Spot.previewContainer)
 }
+#endif

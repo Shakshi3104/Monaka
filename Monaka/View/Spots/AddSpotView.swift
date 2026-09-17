@@ -55,7 +55,9 @@ struct AddSpotView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     AddSpotView()
         .modelContainer(Spot.previewContainer)
 }
+#endif

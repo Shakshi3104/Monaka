@@ -60,7 +60,9 @@ struct EditSpotView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     EditSpotView(spot: Spot.samples[0])
         .modelContainer(Spot.previewContainer)
 }
+#endif
