@@ -140,6 +140,19 @@ The share extension's form is the one screen none of this reaches — it needs a
 
 If a build fails, read the output carefully and fix the errors before reporting back. Do not stop at the first error — fix as many as you can in one pass.
 
+### Release to TestFlight
+
+Releases go through `asc` (App Store Connect CLI) with the workflows in `.asc/workflow.json` — see `RELEASE.md`. App ID `6813017923`, external group `Monaka Testers`.
+
+```bash
+asc workflow run testflight_internal VERSION:1.0
+asc workflow run testflight_external VERSION:1.0 GROUP:"Monaka Testers"
+```
+
+- **Build numbers are the git commit count**, stamped by the `Set Build Number` Run Script phase on both targets. Never bump `CURRENT_PROJECT_VERSION` by hand, and never re-run a workflow without a new commit — the number collides with the build already uploaded.
+- **Never pass `SUBMIT_BETA:false` for an external release.** Every build must go through Beta App Review individually or it stalls at "Ready to Submit".
+- `#Preview` bodies compile in Release too. Anything that touches `Spot.samples` / `Spot.previewContainer` must sit inside `#if DEBUG`, or the archive fails where the simulator build passed.
+
 ---
 
 ## 5. Code Style

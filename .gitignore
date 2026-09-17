@@ -22,3 +22,9 @@ Packages/
 # Playgrounds
 timeline.xctimeline
 playground.xcworkspace
+
+# Release (asc)
+.env
+.asc/config.json
+.asc/artifacts/
+.asc/runs/

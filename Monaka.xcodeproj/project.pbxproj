@@ -116,6 +116,7 @@
 				74D43D863056B8E3007FDE6C /* Frameworks */,
 				74D43D873056B8E3007FDE6C /* Resources */,
 				74D43E383056C7ED007FDE6C /* Embed Foundation Extensions */,
+				CEA12E20305BE11C00FB70E8 /* Set Build Number */,
 			);
 			buildRules = (
 			);
@@ -139,6 +140,7 @@
 				74D43E253056C7ED007FDE6C /* Sources */,
 				74D43E263056C7ED007FDE6C /* Frameworks */,
 				74D43E273056C7ED007FDE6C /* Resources */,
+				CEA12E21305BE11C00FB70E8 /* Set Build Number */,
 			);
 			buildRules = (
 			);
@@ -211,6 +213,47 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		CEA12E20305BE11C00FB70E8 /* Set Build Number */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Set Build Number";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cd \"$SRCROOT\"\nBUILD_NUMBER=$(git rev-list --count HEAD 2>/dev/null || echo \"1\")\nAPP_PLIST=\"$BUILT_PRODUCTS_DIR/$INFOPLIST_PATH\"\nif [ -f \"$APP_PLIST\" ]; then\n    /usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $BUILD_NUMBER\" \"$APP_PLIST\"\n    echo \"Set CFBundleVersion to $BUILD_NUMBER in $APP_PLIST\"\nfi\n# NOTE: Do NOT modify the embedded .appex Info.plist here. This phase runs after the\n# share extension is signed, so editing its Info.plist breaks the appex code signature\n# (invalid Info.plist / 0xe8008001 on device install). The extension sets its own\n# CFBundleVersion via its own build phase, before it is signed.\n";
+		};
+		CEA12E21305BE11C00FB70E8 /* Set Build Number */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Set Build Number";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cd \"$SRCROOT\"\nBUILD_NUMBER=$(git rev-list --count HEAD 2>/dev/null || echo \"1\")\nEXT_PLIST=\"$BUILT_PRODUCTS_DIR/$INFOPLIST_PATH\"\nif [ -f \"$EXT_PLIST\" ]; then\n    /usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $BUILD_NUMBER\" \"$EXT_PLIST\"\n    echo \"Set CFBundleVersion to $BUILD_NUMBER in $EXT_PLIST\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		74D43D853056B8E3007FDE6C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -275,7 +318,7 @@
 				DEVELOPMENT_TEAM = WHBF4Z49B6;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -340,7 +383,7 @@
 				DEVELOPMENT_TEAM = WHBF4Z49B6;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
