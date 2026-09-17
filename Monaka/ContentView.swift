@@ -3,8 +3,8 @@
 //  Monaka
 //
 //  Root. Two lenses on the same collection plus the list; each tab owns its own
-//  NavigationStack. Add sits in the detached `.search` slot at the end of the
-//  tab bar and opens a sheet instead of switching tabs.
+//  NavigationStack. Add sits in the detached capsule at the end of the tab bar
+//  and opens a sheet instead of switching tabs.
 //
 
 import SwiftUI
@@ -47,10 +47,21 @@ struct ContentView: View {
             Tab("Map", systemImage: "map", value: AppTab.map) {
                 SpotMapView()
             }
-            Tab("Add", systemImage: "plus", value: AppTab.add, role: .search) {
-                // Never shown: selecting this tab bounces straight back and
-                // presents the sheet below.
-                Color.clear
+            // Two roles for one capsule. `.search` was the only trailing-
+            // separated slot on iOS 26, so Add borrowed it; iOS 27 gave the
+            // separation its own role and draws a borrowed `.search` inline
+            // with the rest, which is Add reading as a fourth destination.
+            // `.prominent` is what `.search` was being used for all along.
+            if #available(iOS 27.0, *) {
+                Tab("Add", systemImage: "plus", value: AppTab.add, role: .prominent) {
+                    // Never shown: selecting this tab bounces straight back and
+                    // presents the sheet below.
+                    Color.clear
+                }
+            } else {
+                Tab("Add", systemImage: "plus", value: AppTab.add, role: .search) {
+                    Color.clear
+                }
             }
         }
         .onChange(of: selection) { previous, current in
