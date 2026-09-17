@@ -256,6 +256,7 @@ private struct FeaturedSpotCard: View {
     }
 }
 
+#if DEBUG
 #Preview {
     TodayView()
         .modelContainer(Spot.previewContainer)
@@ -265,3 +266,4 @@ private struct FeaturedSpotCard: View {
     TodayView()
         .modelContainer(for: Spot.self, inMemory: true)
 }
+#endif

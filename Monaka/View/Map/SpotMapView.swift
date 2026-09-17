@@ -249,7 +249,9 @@ private struct UnpinnedSpotsView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     SpotMapView()
         .modelContainer(Spot.previewContainer)
 }
+#endif

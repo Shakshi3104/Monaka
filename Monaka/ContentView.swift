@@ -75,7 +75,9 @@ struct ContentView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     ContentView()
         .modelContainer(Spot.previewContainer)
 }
+#endif

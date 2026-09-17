@@ -140,6 +140,7 @@ extension Spot.Countdown.Emphasis {
     }
 }
 
+#if DEBUG
 #Preview {
     List {
         ForEach(Spot.samples) { spot in
@@ -147,3 +148,4 @@ extension Spot.Countdown.Emphasis {
         }
     }
 }
+#endif

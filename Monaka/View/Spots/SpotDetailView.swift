@@ -330,6 +330,7 @@ extension Spot {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         SpotDetailView(spot: Spot.samples[0])
@@ -343,3 +344,4 @@ extension Spot {
     }
     .modelContainer(Spot.previewContainer)
 }
+#endif

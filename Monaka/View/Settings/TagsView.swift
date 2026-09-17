@@ -105,9 +105,11 @@ struct TagsView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         TagsView()
     }
     .modelContainer(Spot.previewContainer)
 }
+#endif
