@@ -170,7 +170,7 @@ If a build fails, read the output carefully and fix the errors before reporting 
 - **Three tabs.** `ContentView` is a `TabView`: **Today** (where to go today), **All** (the full §7.2 sectioned list), **Map**. Each tab owns its own `NavigationStack`. Settings is a gear in the nav bar opening a sheet (Madeleine / yomy style).
   - `Today` carries only `This Weekend` / `Ending Soon` / `Open Now`, led by one featured spot. `Upcoming`, `Anytime`, `Visited` and `Ended` live in `All`.
   - The featured spot is **also** listed in the section below it. The card is a highlight, not a removal.
-  - **Add lives in the tab bar's `.search` slot** — `Tab("Add", systemImage: "plus", value: .add, role: .search)`, which iOS 26 draws as a detached capsule at the right end. It is not a real tab: selecting it bounces the selection back and presents the Add sheet. No FAB.
+  - **Add lives in the tab bar's detached capsule at the right end** — `role: .prominent` on iOS 27, falling back to `role: .search` on 26. `.search` was the only trailing-separated slot on iOS 26 and Add borrowed it; iOS 27 gave the separation its own role and draws a borrowed `.search` inline with the other tabs, so the role is picked behind an `#available`. It is not a real tab either way: selecting it bounces the selection back and presents the Add sheet. No FAB.
 - **Destructive actions in the detail view confirm via `.alert`**, not `.confirmationDialog`. List swipe-to-delete is the deliberate exception and deletes immediately.
 
 ### 6.2 Liquid Glass
