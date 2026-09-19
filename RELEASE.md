@@ -41,7 +41,7 @@ Xcode を複数入れている場合は `DEVELOPER_DIR` で使う方を固定す
 asc workflow run testflight_internal VERSION:1.0
 ```
 
-archive → IPA エクスポート → アップロード → 処理完了待ち を 1 コマンドで実行します。
+archive → IPA エクスポート → アップロード → 処理完了待ち → `Internal Testers` へ配信 を 1 コマンドで実行します。
 
 ### External Testing(社外テスター、Beta App Review が必要)
 
@@ -49,7 +49,7 @@ archive → IPA エクスポート → アップロード → 処理完了待ち
 asc workflow run testflight_external VERSION:1.0 GROUP:"Monaka Testers"
 ```
 
-archive → IPA エクスポート → アップロード → 指定 Beta Group へ配信 → Beta App Review 提出 を 1 コマンドで実行します。
+archive → IPA エクスポート → アップロード → `Internal Testers` と指定 Beta Group へ配信 → Beta App Review 提出 を 1 コマンドで実行します。内部グループは `INTERNAL_GROUP`(既定 `Internal Testers`)で変えられます。
 
 **`SUBMIT_BETA:false` は渡さないこと。** 同じ Marketing Version でも、ビルドごとに Beta App Review に提出しないと "Ready to Submit" で止まってテスターに届きません。
 

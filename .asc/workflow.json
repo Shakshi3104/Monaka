@@ -7,11 +7,12 @@
     "EXPORT_OPTIONS": ".asc/export-options.plist",
     "VERSION": "",
     "GROUP": "",
-    "SUBMIT_BETA": "true"
+    "SUBMIT_BETA": "true",
+    "INTERNAL_GROUP": "Internal Testers"
   },
   "workflows": {
     "testflight_internal": {
-      "description": "Archive Monaka, export an IPA, and upload to TestFlight for internal testing. Build number is auto-managed by the Xcode Run Script phase (git commit count). Signing uses the App Store Connect API key from .env (ASC_KEY_ID / ASC_ISSUER_ID / ASC_PRIVATE_KEY_PATH) when set, so it does not depend on an Apple ID being signed into Xcode.",
+      "description": "Archive Monaka, export an IPA, and upload to TestFlight, and add the build to INTERNAL_GROUP (default \"Internal Testers\"). Build number is auto-managed by the Xcode Run Script phase (git commit count). Signing uses the App Store Connect API key from .env (ASC_KEY_ID / ASC_ISSUER_ID / ASC_PRIVATE_KEY_PATH) when set, so it does not depend on an Apple ID being signed into Xcode.",
       "steps": [
         {
           "name": "validate_version",
@@ -32,13 +33,13 @@
           }
         },
         {
-          "name": "upload",
-          "run": "asc builds upload --app \"$APP_ID\" --ipa ${steps.export.IPA_PATH} --wait --output json"
+          "name": "publish",
+          "run": "asc publish testflight --app \"$APP_ID\" --ipa ${steps.export.IPA_PATH} --group \"$INTERNAL_GROUP\" --wait --output json"
         }
       ]
     },
     "testflight_external": {
-      "description": "Archive Monaka, export an IPA, upload to TestFlight, attach to an External Beta Group, and submit for Beta App Review. Pass GROUP:<name|id>. Pass SUBMIT_BETA:false to skip review submission for subsequent builds of an already-approved version. Signing uses the App Store Connect API key from .env (ASC_KEY_ID / ASC_ISSUER_ID / ASC_PRIVATE_KEY_PATH) when set, so it does not depend on an Apple ID being signed into Xcode.",
+      "description": "Archive Monaka, export an IPA, upload to TestFlight, attach to an External Beta Group, and submit for Beta App Review. Pass GROUP:<name|id>. Pass SUBMIT_BETA:false to skip review submission for subsequent builds of an already-approved version. Signing uses the App Store Connect API key from .env (ASC_KEY_ID / ASC_ISSUER_ID / ASC_PRIVATE_KEY_PATH) when set, so it does not depend on an Apple ID being signed into Xcode. The build also goes to INTERNAL_GROUP (default \"Internal Testers\"), so internal testers get every external build.",
       "steps": [
         {
           "name": "validate_inputs",
@@ -60,7 +61,7 @@
         },
         {
           "name": "publish",
-          "run": "SUBMIT_FLAGS=\"\"; if [ \"$SUBMIT_BETA\" = \"true\" ]; then SUBMIT_FLAGS=\"--submit --confirm\"; fi; asc publish testflight --app \"$APP_ID\" --ipa ${steps.export.IPA_PATH} --group \"$GROUP\" --wait $SUBMIT_FLAGS --output json"
+          "run": "SUBMIT_FLAGS=\"\"; if [ \"$SUBMIT_BETA\" = \"true\" ]; then SUBMIT_FLAGS=\"--submit --confirm\"; fi; asc publish testflight --app \"$APP_ID\" --ipa ${steps.export.IPA_PATH} --group \"$INTERNAL_GROUP,$GROUP\" --wait $SUBMIT_FLAGS --output json"
         }
       ]
     }
