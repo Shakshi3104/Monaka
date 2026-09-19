@@ -145,9 +145,12 @@ If a build fails, read the output carefully and fix the errors before reporting 
 Releases go through `asc` (App Store Connect CLI) with the workflows in `.asc/workflow.json` — see `RELEASE.md`. App ID `6813017923`, external group `Monaka Testers`.
 
 ```bash
+set -a; source .env; set +a      # API key for xcodebuild signing — see RELEASE.md
 asc workflow run testflight_internal VERSION:1.0
 asc workflow run testflight_external VERSION:1.0 GROUP:"Monaka Testers"
 ```
+
+Use Xcode 27.0 at `/Applications/Xcode.app` (`export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`); the copy in `~/Downloads` is a newer build whose simulator runtime isn't installed system-wide.
 
 - **Build numbers are the git commit count**, stamped by the `Set Build Number` Run Script phase on both targets. Never bump `CURRENT_PROJECT_VERSION` by hand, and never re-run a workflow without a new commit — the number collides with the build already uploaded.
 - **Never pass `SUBMIT_BETA:false` for an external release.** Every build must go through Beta App Review individually or it stalls at "Ready to Submit".

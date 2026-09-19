@@ -19,11 +19,21 @@ brew install asc
 
 チームレベルの API キーが 1 つあれば全アプリに使えます。すでに `asc auth login` で登録したプロファイルがあれば(`asc auth status` で確認)、そのまま Monaka にも効きます。
 
-新しく作る場合は https://appstoreconnect.apple.com/access/integrations/api でチームキーを生成(Admin 権限)し、`asc auth login` で登録するか、`.env.example` をコピーした `.env` に `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_PRIVATE_KEY_PATH` を入れて `set -a; source .env; set +a` で読み込みます。`.env` は `.gitignore` 済みです。
+新しく作る場合は https://appstoreconnect.apple.com/access/integrations/api でチームキーを生成(Admin 権限)し、`asc auth login` で登録します。
+
+**`.env` も用意してください**(`.env.example` をコピーして `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_PRIVATE_KEY_PATH` / `ASC_APP_ID` を記入、`.gitignore` 済み)。ワークフローはこの値を `xcodebuild` の `-authenticationKey*` に渡して署名を解決するので、Xcode に Apple ID がログインしていなくても archive / export が通ります。未設定だと Xcode のアカウントに頼り、トークンが切れていると `exportArchive No Accounts` で落ちます。
+
+実行前に読み込む:
+
+```bash
+set -a; source .env; set +a
+```
 
 ---
 
 ## リリース手順
+
+Xcode を複数入れている場合は `DEVELOPER_DIR` で使う方を固定する(`export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`)。
 
 ### Internal Testing(自分や組織メンバーのみ、即配信)
 
