@@ -20,8 +20,9 @@ struct ContentView: View {
     @State private var selection: AppTab = {
         #if DEBUG
         if DebugLaunchArgument.tabMap.isSet { return .map }
-        // Settings hangs off the All tab, so -tags-first implies it.
+        // Settings hangs off the All tab, so -settings-first and deeper imply it.
         if DebugLaunchArgument.tabAll.isSet
+            || DebugLaunchArgument.settingsSheet.isSet
             || DebugLaunchArgument.tagsScreen.isSet
             || DebugLaunchArgument.newTagScreen.isSet
             || DebugLaunchArgument.iconPicker.isSet { return .all }

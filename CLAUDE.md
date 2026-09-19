@@ -125,6 +125,7 @@ Most screens sit behind a tap nothing outside the app can make. Every DEBUG laun
 | `-add-first` | the Add sheet |
 | `-detail-first` | the Today tab's featured spot |
 | `-edit-first` | that spot's Edit sheet |
+| `-settings-first` | Settings |
 | `-tags-first` | Settings → Tags |
 | `-new-tag-first` | Settings → Tags → New Tag |
 | `-icon-picker-first` | …→ its icon grid |
@@ -234,7 +235,7 @@ Evaluated top to bottom; a spot lands in the **first** section it matches and ap
 | Visited | `isVisited == true` | `visitedAt` descending |
 | Ended | the run is over and it was never visited | `endDate` descending |
 
-`Ended` is the "missed it" bucket — make it hideable from Settings.
+`Ended` is the "missed it" bucket and `Visited` the "been there" bucket — both hideable from Settings (`hidesEndedSection` / `hidesVisitedSection`). The Map tab has its own Show Visited filter and is not affected.
 
 **`Spot.WeekendRule` — "This Weekend" means two different things.** Exhibition runs are months long, so a plain intersection test puts nearly every open spot in `This Weekend` and leaves `Ending Soon` and `Open Now` empty. The rule is therefore per-screen:
 
@@ -448,7 +449,7 @@ MonakaShare/                        share extension target (Phase 2)
 - [x] Distance sort + `LocationProvider` (§7.3) — applies within every section
 - [x] `SpotMapView` — pins tinted by countdown, selection card, unpinned-spots sheet
 - [x] Tag management — `SettingsView` + `TagsView` (rename / delete across spots), tag filter in the All tab
-- [x] Hide Ended from Settings (§7.2)
+- [x] Hide Ended / Hide Visited from Settings (§7.2)
 
 ### Phase 3 — Reminding
 - [ ] `SavedPlacesImporter` — Takeout CSV import with preview (§8.3)

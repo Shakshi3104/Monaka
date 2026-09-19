@@ -25,7 +25,9 @@ enum DebugLaunchArgument: String, CaseIterable {
     /// that is what puts a detail view on screen to open the sheet from.
     case editSheet = "-edit-first"
 
-    /// Open Settings on the All tab, already pushed to Tags.
+    /// Open Settings on the All tab.
+    case settingsSheet = "-settings-first"
+    /// …already pushed to Tags.
     case tagsScreen = "-tags-first"
     /// …and one further, to the New Tag screen.
     case newTagScreen = "-new-tag-first"

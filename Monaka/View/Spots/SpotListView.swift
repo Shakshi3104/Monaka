@@ -19,6 +19,7 @@ struct SpotListView: View {
     /// dated spots (§7.3).
     @AppStorage("isAnytimeExpanded") private var isAnytimeExpanded = false
     @AppStorage("hidesEndedSection") private var hidesEndedSection = false
+    @AppStorage("hidesVisitedSection") private var hidesVisitedSection = false
     @AppStorage("sortsByDistance") private var sortsByDistance = false
     @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
 
@@ -28,7 +29,8 @@ struct SpotListView: View {
     /// §4 — Settings is a sheet off a gear nothing outside the app can tap.
     @State private var isShowingSettings = {
         #if DEBUG
-        DebugLaunchArgument.tagsScreen.isSet
+        DebugLaunchArgument.settingsSheet.isSet
+            || DebugLaunchArgument.tagsScreen.isSet
             || DebugLaunchArgument.newTagScreen.isSet
             || DebugLaunchArgument.iconPicker.isSet
         #else
@@ -53,6 +55,7 @@ struct SpotListView: View {
     private var sections: [(section: SpotSection, spots: [Spot])] {
         SpotSection.grouped(visibleSpots, on: today, weekend: .lastChance)
             .filter { !(hidesEndedSection && $0.section == .ended) }
+            .filter { !(hidesVisitedSection && $0.section == .visited) }
             .map { section, spots in (section, sortedByDistanceIfAsked(spots)) }
     }
 

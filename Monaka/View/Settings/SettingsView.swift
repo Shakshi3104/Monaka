@@ -20,8 +20,11 @@ enum SettingsRoute: Hashable {
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
-    /// `Ended` is the "missed it" bucket — hideable (§7.2).
+    /// `Ended` is the "missed it" bucket — hideable (§7.2). `Visited` is the
+    /// "been there" bucket, and once the list is long it is the same kind of
+    /// noise: neither is somewhere you can still go.
     @AppStorage("hidesEndedSection") private var hidesEndedSection = false
+    @AppStorage("hidesVisitedSection") private var hidesVisitedSection = false
     @AppStorage("sortsByDistance") private var sortsByDistance = false
 
     let locationProvider: LocationProvider
@@ -47,8 +50,11 @@ struct SettingsView: View {
 
                 Section {
                     Toggle("Hide Ended Spots", isOn: $hidesEndedSection)
+                    Toggle("Hide Visited Spots", isOn: $hidesVisitedSection)
+                } header: {
+                    Text("All")
                 } footer: {
-                    Text("Hides the section of runs you missed.")
+                    Text("Ended holds the runs you missed, Visited the spots you've checked off. Hiding them keeps the All tab to places you can still go. Both stay on the map.")
                 }
 
                 Section {
