@@ -106,18 +106,23 @@ struct SpotDetailView: View {
     /// Floats above the grouped sections rather than sitting in a card of its
     /// own — the Contacts pattern. The title is the nav title; this carries the
     /// image, the venue and how much run is left.
+    ///
+    /// It is a section *header*, not a row: an inset-grouped row clips its
+    /// content to the cell's rounded corners even with a clear background,
+    /// and the metadata line sits exactly where the bottom-left corner curves
+    /// in — the first glyph lost its stem on device.
     @ViewBuilder
     private var header: some View {
         if spot.imageURL != nil || venue != nil || countdown.text != nil {
             Section {
+            } header: {
                 VStack(alignment: .leading, spacing: 10) {
                     headerImage
                     metadataLine
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 12, trailing: 0))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+                .textCase(nil)
             }
         }
     }
