@@ -72,8 +72,9 @@ struct SpotMapView: View {
             .navigationTitle("Map")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if !unpinned.isEmpty {
-                    ToolbarItem(placement: .topBarLeading) {
+                // Everything trailing, as on the All tab.
+                ToolbarItemGroup(placement: .primaryAction) {
+                    if !unpinned.isEmpty {
                         Button {
                             isShowingUnpinned = true
                         } label: {
@@ -84,8 +85,6 @@ struct SpotMapView: View {
                         }
                         .accessibilityLabel("\(unpinned.count) spots not on the map")
                     }
-                }
-                ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Toggle("Show Visited", isOn: $showsVisited)
                         Toggle("Show Ended", isOn: $showsEnded)
