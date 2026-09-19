@@ -87,12 +87,13 @@ struct SpotListView: View {
             .navigationTitle("All")
             .navigationSubtitle(selectedTag.map { "Tagged \($0)" } ?? "")
             .toolbar {
-                if !allTags.isEmpty {
-                    ToolbarItem(placement: .topBarLeading) {
+                // Both on the trailing side, filter first: the Map tab keeps
+                // its filter there too, and the leading slot stays free for
+                // whatever the nav stack needs.
+                ToolbarItemGroup(placement: .primaryAction) {
+                    if !allTags.isEmpty {
                         tagFilterMenu
                     }
-                }
-                ToolbarItem(placement: .primaryAction) {
                     Button("Settings", systemImage: "gear") {
                         isShowingSettings = true
                     }
