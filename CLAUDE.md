@@ -37,7 +37,7 @@ Monaka owns exactly that gap: **a ToDo that has a run**. Anything that doesn't n
 | App Group | `group.com.shakshi.Monaka` |
 | Xcode | 26.0+ |
 | Swift | 6.1+ |
-| Accent Color | Azuki `#A9414E` (Dark variant ~`#C85C68`) |
+| Accent Color | Yozora `#3D56B2` (Dark variant `#8497E6`) — the icon's night sky, brightened. Blue so it never competes with `.orange` (ending soon) or `.green` (visited) |
 
 No SPM dependencies. Everything the app needs is in the standard library + SwiftUI + SwiftData.
 
@@ -183,7 +183,7 @@ Use Xcode 27.0 at `/Applications/Xcode.app` (`export DEVELOPER_DIR=/Applications
 
 - **English UI.** Every user-facing string is English. Data fetched from a venue's page (venue names, exhibition titles in Japanese) stays as-is — that's source data.
 - **Dates: `yyyy/MM/dd`, `en_US_POSIX` locale, `Asia/Tokyo` timezone.** Always set **both** `locale` and `timeZone` on a `DateFormatter`. The TZ pin matters when the user is travelling.
-- **System colors only.** `.primary` / `.secondary` / `.tertiary` for text, `Color(.systemGroupedBackground)` / `Color(.secondarySystemGroupedBackground)` for surfaces, `Color.accentColor` for the azuki tint. Never hardcode `Color.white` / `Color.black` / `.preferredColorScheme(.dark)`.
+- **System colors only.** `.primary` / `.secondary` / `.tertiary` for text, `Color(.systemGroupedBackground)` / `Color(.secondarySystemGroupedBackground)` for surfaces, `Color.accentColor` for the yozora tint. Never hardcode `Color.white` / `Color.black` / `.preferredColorScheme(.dark)`.
 - **Three tabs.** `ContentView` is a `TabView`: **Today** (where to go today), **All** (the full §7.2 sectioned list), **Map**. Each tab owns its own `NavigationStack`. Settings is a gear in the nav bar opening a sheet (Madeleine / yomy style).
   - `Today` carries only `This Weekend` / `Ending Soon` / `Open Now`, led by one featured spot. `Upcoming`, `Anytime`, `Visited` and `Ended` live in `All`.
   - The featured spot is **also** listed in the section below it. The card is a highlight, not a removal.
@@ -422,7 +422,7 @@ MonakaShare/                        share extension target (Phase 2)
 - [x] New iOS App project `Monaka`, SwiftUI + SwiftData, Team `WHBF4Z49B6`
 - [x] Deployment Target iOS 26.0
 - [x] `Monaka/` added as a **synchronized folder**
-- [x] AccentColor `#A9414E` (Any) / `#C85C68` (Dark) in the asset catalog
+- [x] AccentColor in the asset catalog (azuki at first; yozora blue since 2026-09-20)
 - [x] App Group `group.com.shakshi.Monaka`
 - [x] `Shakshi3104/Monaka` created on GitHub (public)
 
