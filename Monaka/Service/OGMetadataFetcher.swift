@@ -16,8 +16,11 @@ struct OGMetadata: Equatable, Sendable {
     var title: String?
     var imageURL: String?
     var siteName: String?
+    /// `og:description`. For most pages it's marketing copy and stays unused;
+    /// for a social post it is the caption, which is the whole point.
+    var description: String?
 
-    var isEmpty: Bool { title == nil && imageURL == nil && siteName == nil }
+    var isEmpty: Bool { title == nil && imageURL == nil && siteName == nil && description == nil }
 }
 
 struct OGMetadataFetcher: Sendable {
@@ -66,6 +69,7 @@ struct OGMetadataFetcher: Sendable {
         metadata.title = metaContent(["og:title", "twitter:title"], in: html)
             ?? firstMatch("<title[^>]*>([^<]*)</title>", in: html)?.decodingHTMLEntities.nilIfBlank
         metadata.siteName = metaContent(["og:site_name"], in: html)
+        metadata.description = metaContent(["og:description", "twitter:description", "description"], in: html)
         if let image = metaContent(["og:image", "og:image:url", "twitter:image"], in: html) {
             // OG images are often written as a path, not an absolute URL.
             metadata.imageURL = URL(string: image, relativeTo: base)?.absoluteString ?? image
@@ -119,6 +123,31 @@ extension String {
         for (entity, character) in entities {
             text = text.replacingOccurrences(of: entity, with: character, options: .caseInsensitive)
         }
+        // Numeric references — Instagram writes every non-ASCII character
+        // of a title as `&#x30e0;`, and so do other sites with Japanese.
+        if text.contains("&#") {
+            text = text.decodingNumericEntities
+        }
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var decodingNumericEntities: String {
+        guard let regex = try? NSRegularExpression(pattern: #"&#(x[0-9a-fA-F]{1,6}|[0-9]{1,7});"#) else { return self }
+        var out = ""
+        var cursor = startIndex
+        for match in regex.matches(in: self, range: NSRange(startIndex..., in: self)) {
+            guard let range = Range(match.range, in: self), let code = Range(match.range(at: 1), in: self) else { continue }
+            out += self[cursor..<range.lowerBound]
+            let body = self[code]
+            let value = body.hasPrefix("x") || body.hasPrefix("X") ? UInt32(body.dropFirst(), radix: 16) : UInt32(body)
+            if let value, let scalar = Unicode.Scalar(value) {
+                out.unicodeScalars.append(scalar)
+            } else {
+                out += self[range]
+            }
+            cursor = range.upperBound
+        }
+        out += self[cursor...]
+        return out
     }
 }

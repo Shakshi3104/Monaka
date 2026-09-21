@@ -281,6 +281,7 @@ The share extension and the in-app URL field both hand their input to `ShareInpu
 |---|---|---|
 | `maps.app.goo.gl`, `goo.gl/maps`, `google.com/maps`, `maps.google.*` | `MapLinkResolver` | `title`, `latitude`, `longitude`, `mapURL` |
 | `maps.apple.com` | `MapLinkResolver` | `title` (`q=`), `latitude`, `longitude` (`ll=`), `mapURL` |
+| a social post (`instagram.com`, `threads.net`, `x.com`, …) | `OGMetadataFetcher` | `title`, `imageURL`, `urlString`, `notes` (`og:description` — the caption); no `venue`, the site name isn't one. With `SpotExtractor`, the caption path then replaces the title with the place's name |
 | any other URL | `OGMetadataFetcher` | `title`, `imageURL`, `venue` (`og:site_name`), `urlString` |
 | plain text | `SpotExtractor` (a caption) | `title` (the place's name), `venue`, `notes` (the caption), `suggestedAddress`; a run only for an exhibition / event / pop-up |
 
@@ -357,9 +358,9 @@ Two things still need Xcode's GUI and must be handed back to the user:
 - New **targets** (the share extension, the widget extension)
 - **Capabilities** (App Groups) and asset catalog entries created through the asset editor
 
-Also: a synchronized folder can only belong to one target. These seven files are therefore **duplicated verbatim** into `MonakaShare/`:
+Also: a synchronized folder can only belong to one target. These eight files are therefore **duplicated verbatim** into `MonakaShare/`:
 
-`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`, `SpotExtractor.swift`
+`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`, `SpotExtractor.swift`, `ClearableTextField.swift`
 
 **Edit both copies together**, and keep them byte-identical — `diff` them after touching any of them. Only files with no app-only dependency belong on this list; anything that interprets a spot (`Spot+Period.swift`) stays app-only.
 
@@ -391,6 +392,7 @@ Monaka/
 │   ├── SavedPlacesImporter.swift   Google Takeout CSV → [SpotDraft]
 │   └── LocationProvider.swift      CoreLocation, When In Use, requested lazily
 └── View/
+    ├── ClearableTextField.swift    TextField + ⓧ, both forms (duplicated in MonakaShare/)
     ├── Today/
     │   └── TodayView.swift         featured pick + This Weekend / Ending Soon / Open Now
     ├── Spots/

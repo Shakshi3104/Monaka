@@ -28,8 +28,8 @@ struct ShareFormView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Title", text: $draft.title)
-                    TextField("Venue", text: $draft.venue)
+                    ClearableTextField("Title", text: $draft.title)
+                    ClearableTextField("Venue", text: $draft.venue)
                 } footer: {
                     if isResolving {
                         HStack(spacing: 6) {
@@ -105,7 +105,14 @@ struct ShareFormView: View {
                     }
                 case let .url(url):
                     guard !MapLinkResolver.isMapLink(url) else { return }
-                    if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
+                    if ShareInputResolver.isSocialPost(url) {
+                        // An Instagram post: the caption is in Notes now, and
+                        // the og:title (“user on Instagram: …”) is no title.
+                        guard let caption = resolved.notes.nilIfBlank,
+                              let extraction = await SpotExtractor().extract(fromText: caption)
+                        else { return }
+                        draft.adopt(extraction, caption: caption)
+                    } else if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
                         draft.fillEmptyFields(from: extraction)
                     }
                 }
