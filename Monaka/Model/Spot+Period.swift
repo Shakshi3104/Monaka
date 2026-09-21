@@ -363,12 +363,41 @@ extension DateFormatter {
     /// `04/11 (Sat)` — only for *today*, where the year is never in question.
     /// Anything describing a run keeps the full §6.1 format.
     static let monakaTodayDate = monaka("MM/dd (E)")
+    /// `4/11` — for a list row, where the year is dropped when it's this
+    /// year and the zero padding goes too (see `Spot.compactRunText`).
+    static let monakaMonthDay = monaka("M/d")
+    /// `2027/1/10` — the row form for a date outside the current year.
+    static let monakaCompactDate = monaka("yyyy/M/d")
 }
 
 extension Spot {
     /// `2026/04/11 – 2026/06/21`, `Until 2026/06/21`, `From 2026/10/03`, `Anytime`.
     var runText: String {
         let format = DateFormatter.monakaDate.string(from:)
+        switch run {
+        case let .period(start, end):
+            return "\(format(start)) – \(format(end))"
+        case let .until(end):
+            return "Until \(format(end))"
+        case let .from(start):
+            return "From \(format(start))"
+        case .anytime:
+            return "Anytime"
+        }
+    }
+
+    /// `4/11 – 6/21` — the row form. A full `yyyy/MM/dd – yyyy/MM/dd` never
+    /// fit beside a venue name and the end date, the half that matters, was
+    /// the half that got truncated. The year appears only on a date outside
+    /// the current year (`12/20 – 2027/1/10`), so a run that crosses New
+    /// Year still says so.
+    func compactRunText(on today: Date = .now, calendar: Calendar = .monaka) -> String {
+        let thisYear = calendar.component(.year, from: today)
+        func format(_ date: Date) -> String {
+            calendar.component(.year, from: date) == thisYear
+                ? DateFormatter.monakaMonthDay.string(from: date)
+                : DateFormatter.monakaCompactDate.string(from: date)
+        }
         switch run {
         case let .period(start, end):
             return "\(format(start)) – \(format(end))"

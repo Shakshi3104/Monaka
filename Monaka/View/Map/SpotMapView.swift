@@ -184,7 +184,7 @@ struct SpotMapView: View {
                         .font(.headline)
                         .lineLimit(1)
                         .foregroundStyle(.primary)
-                    Text([spot.venue, spot.hasRun ? spot.runText : nil]
+                    Text([spot.venue, spot.hasRun ? spot.compactRunText(on: today) : nil]
                         .compactMap { $0 }
                         .joined(separator: " · "))
                         .font(.caption)
