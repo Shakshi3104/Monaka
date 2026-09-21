@@ -59,9 +59,10 @@ struct SpotDetailView: View {
         // there (today's date, the active tag filter), which is how the system
         // uses it. A venue is content, so it belongs in the body.
         .navigationTitle(spot.title)
-        // A bar, not a plain inset: the list fades out under it instead of
-        // colliding with the map snapshot halfway through a scroll.
-        .safeAreaBar(edge: .bottom) { visitedBar }
+        // A plain inset, not a bar: `safeAreaBar` paints a bar backdrop that
+        // reads as a stray dark band above the tab bar. The button is glass
+        // instead, so it floats over whatever scrolls under it (§6.2).
+        .safeAreaInset(edge: .bottom) { visitedBar }
         .toolbar {
             // Edit is the thing you come here to do, so it's a button, not a
             // menu item. Share and Delete are the rare ones and stay tucked.
@@ -319,7 +320,7 @@ struct SpotDetailView: View {
             .fontWeight(.semibold)
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.glassProminent)
         .buttonBorderShape(.capsule)
         .controlSize(.extraLarge)
         .tint(spot.isVisited ? .green : .accentColor)
