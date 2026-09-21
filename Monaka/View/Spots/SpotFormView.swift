@@ -33,8 +33,8 @@ struct SpotFormView: View {
     var body: some View {
         Form {
             Section("Spot") {
-                TextField("Title", text: $draft.title)
-                TextField("Venue", text: $draft.venue)
+                ClearableTextField("Title", text: $draft.title)
+                ClearableTextField("Venue", text: $draft.venue)
             }
 
             // Directly under the fields it fills. It used to sit below Tags,
@@ -76,7 +76,7 @@ struct SpotFormView: View {
     private var linkSection: some View {
         Section {
             HStack(spacing: 8) {
-                TextField("https://", text: $draft.urlString)
+                ClearableTextField("https://", text: $draft.urlString)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
@@ -329,6 +329,31 @@ extension View {
 
 /// Its own view so `dismiss` resolves against the sheet the dialog was
 /// attached to rather than whatever presented it.
+/// A text field with the ⓧ that autofilled text needs: a title pulled from
+/// a page is often nearly right, and retyping beats backspacing through it.
+/// Same glyph as the image row's remove button, so the form reads as one.
+struct ClearableTextField: View {
+    let title: LocalizedStringKey
+    @Binding var text: String
+
+    init(_ title: LocalizedStringKey, text: Binding<String>) {
+        self.title = title
+        _text = text
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            TextField(title, text: $text)
+            if !text.isEmpty {
+                Button("Clear", systemImage: "xmark.circle.fill") { text = "" }
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
 struct DiscardChangesButtons: View {
     @Environment(\.dismiss) private var dismiss
 
