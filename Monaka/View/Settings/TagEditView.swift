@@ -25,9 +25,12 @@ struct TagEditView: View {
     init(tag: String? = nil) {
         self.tag = tag
         _name = State(initialValue: tag ?? "")
-        // The stored icon can't be read before the view has its AppStorage, so
-        // this starts at the default and `task` corrects it.
-        _icon = State(initialValue: TagVocabulary.defaultIcon)
+        // Read the stored icon here, once. Doing it in `task` looked the same
+        // but `task` re-runs every time this view comes back on screen — so
+        // returning from the icon picker reset the icon to the stored one and
+        // the choice was lost.
+        let raw = UserDefaults.standard.string(forKey: TagVocabulary.storageKey) ?? ""
+        _icon = State(initialValue: tag.map { TagVocabulary.icon(for: $0, in: raw) } ?? TagVocabulary.defaultIcon)
     }
 
     private var isRenaming: Bool { tag != nil }
@@ -99,7 +102,6 @@ struct TagEditView: View {
             IconPickerView(selection: $icon)
         }
         .task {
-            if let tag { icon = TagVocabulary.icon(for: tag, in: vocabularyRaw) }
             #if DEBUG
             if DebugLaunchArgument.iconPicker.isSet {
                 isPickingIcon = true
