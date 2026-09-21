@@ -410,3 +410,14 @@ extension Spot {
         }
     }
 }
+
+// MARK: - Search
+
+extension Spot {
+    /// Title, venue, tags, address and notes, matched the way the system
+    /// does (case- and diacritic-insensitive, so `cafe` finds `Café`).
+    func matches(_ query: String) -> Bool {
+        let fields = [title, venue, address, notes].compactMap { $0 } + tags
+        return fields.contains { $0.localizedStandardContains(query) }
+    }
+}

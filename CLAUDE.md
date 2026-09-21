@@ -253,6 +253,7 @@ The upcoming weekend is the one we're currently inside if today is Sat/Sun, othe
 Once Google Maps places are imported, `Anytime` will hold an order of magnitude more rows than every dated section combined, and a naive list buries the exhibitions — the thing the app exists for — under a hundred cafés. Two rules keep that from happening:
 
 - **Collapse it.** Above 8 items the `Anytime` section renders as a header row with a count and a disclosure. Expanded state is `@AppStorage`, not SwiftData.
+- **Search it.** The All tab has a search row at the top of the list over title, venue, tags, address and notes (`Spot.matches`). Not `.searchable`: with Add sitting in the tab bar's search/prominent slot, the system search field never appears on this tab in any placement. A search ignores the Hide Ended / Hide Visited toggles and keeps Anytime expanded — a hit behind a disclosure is no hit.
 - **Sort by distance when that's possible.** This is what makes the imported places actually useful — "I'm here, what did I want to try nearby" is how that list gets read, and it is never read by date.
 
 ### Distance sort
