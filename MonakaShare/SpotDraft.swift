@@ -20,8 +20,16 @@ struct SpotDraft: Equatable {
 
     var startDate: Date?
     var endDate: Date?
+    /// The run came from `SpotExtractor`, not from the user. The form says so
+    /// until either date is touched — a proposed run is never written
+    /// silently (§13-8).
+    var isRunSuggested = false
 
     var location: PickedLocation?
+    /// A street address `SpotExtractor` found in the text. Never stored on
+    /// the spot — it seeds the location picker's search, which is how a
+    /// caption's 【住所】 line becomes a pin (§8.1).
+    var suggestedAddress: String?
 
     var tags: [String] = []
 
@@ -37,6 +45,7 @@ struct SpotDraft: Equatable {
         get { startDate }
         set {
             startDate = newValue
+            isRunSuggested = false
             if let start = newValue, let end = endDate, end < start { endDate = start }
         }
     }
@@ -45,6 +54,7 @@ struct SpotDraft: Equatable {
         get { endDate }
         set {
             endDate = newValue
+            isRunSuggested = false
             if let end = newValue, let start = startDate, end < start { startDate = end }
         }
     }
@@ -151,16 +161,18 @@ extension SpotDraft {
     /// and this is the form that says what the app actually stored.
     var runFooter: String {
         let format = { (date: Date) in Self.dateStyle.format(date) }
+        let reading: String
         switch (startDate, endDate) {
         case let (start?, end?):
-            return "Open \(format(start)) – \(format(end))."
+            reading = "Open \(format(start)) – \(format(end))."
         case let (nil, end?):
-            return "Open until \(format(end)). No opening date announced."
+            reading = "Open until \(format(end)). No opening date announced."
         case let (start?, nil):
-            return "Open from \(format(start)). No end announced."
+            reading = "Open from \(format(start)). No end announced."
         case (nil, nil):
-            return "No dates — the spot lands in Anytime and is always available."
+            reading = "No dates — the spot lands in Anytime and is always available."
         }
+        return isRunSuggested ? "Read from the page — check it against the site. " + reading : reading
     }
 }
 

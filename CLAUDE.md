@@ -29,6 +29,7 @@ Monaka owns exactly that gap: **a ToDo that has a run**. Anything that doesn't n
 | Persistence | SwiftData (single-device, no CloudKit sync) |
 | Web metadata | `OGMetadataFetcher` (regex over the first 64 KB of `<head>`), no third-party package |
 | Map links | `MapLinkResolver` — follows the `maps.app.goo.gl` redirect and parses the resolved URL |
+| Text extraction | `SpotExtractor` — Foundation Models (on-device, iOS 26). Proposes title / venue / address / run from a page's body or a shared caption. Optional: silently absent without Apple Intelligence |
 | Location | CoreLocation (When In Use, requested lazily) + MapKit for the detail snapshot |
 | Share Extension | Inserts into the shared store in the App Group container |
 | Widget | WidgetKit, data shared via App Group + JSON file (Phase 3) |
@@ -281,7 +282,9 @@ The share extension and the in-app URL field both hand their input to `ShareInpu
 | `maps.app.goo.gl`, `goo.gl/maps`, `google.com/maps`, `maps.google.*` | `MapLinkResolver` | `title`, `latitude`, `longitude`, `mapURL` |
 | `maps.apple.com` | `MapLinkResolver` | `title` (`q=`), `latitude`, `longitude` (`ll=`), `mapURL` |
 | any other URL | `OGMetadataFetcher` | `title`, `imageURL`, `venue` (`og:site_name`), `urlString` |
-| plain text | — | `title` |
+| plain text | `SpotExtractor` (a caption) | `title` (the place's name), `venue`, `notes` (the caption), `suggestedAddress`; a run only for an exhibition / event / pop-up |
+
+After the OGP step, any web page also goes through `SpotExtractor` for what OGP can't give: a venue named in the body and the run. It fills **only empty fields**, and a run it proposes sets `SpotDraft.isRunSuggested` so the form says "Read from the page — check it against the site" until a date is touched. The model is asked whether the page is about *one* thing and what kind (`shop` never gets dates), and is grounded on the OGP title; listing pages and homepages can still yield their first item, which is why the run is a flagged suggestion and never a silent write.
 
 A resolver that fails fills nothing and is not an error (§13). The form opens either way.
 
@@ -354,9 +357,9 @@ Two things still need Xcode's GUI and must be handed back to the user:
 - New **targets** (the share extension, the widget extension)
 - **Capabilities** (App Groups) and asset catalog entries created through the asset editor
 
-Also: a synchronized folder can only belong to one target. These six files are therefore **duplicated verbatim** into `MonakaShare/`:
+Also: a synchronized folder can only belong to one target. These seven files are therefore **duplicated verbatim** into `MonakaShare/`:
 
-`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`
+`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`, `SpotExtractor.swift`
 
 **Edit both copies together**, and keep them byte-identical — `diff` them after touching any of them. Only files with no app-only dependency belong on this list; anything that interprets a spot (`Spot+Period.swift`) stays app-only.
 
@@ -384,6 +387,7 @@ Monaka/
 │   ├── OGMetadataFetcher.swift     og:title / og:image / og:site_name
 │   ├── MapLinkResolver.swift       Google / Apple Maps link → name + coordinates
 │   ├── ShareInputResolver.swift    dispatches a shared item to the right resolver
+│   ├── SpotExtractor.swift         Foundation Models: title / venue / address / run from text (duplicated in MonakaShare/)
 │   ├── SavedPlacesImporter.swift   Google Takeout CSV → [SpotDraft]
 │   └── LocationProvider.swift      CoreLocation, When In Use, requested lazily
 └── View/
@@ -460,6 +464,7 @@ MonakaShare/                        share extension target (Phase 2)
 ### Phase 4 — Beyond
 - [ ] `CalendarView` (month grid with run bars)
 - [ ] Photos taken on the visit
+- [ ] `SpotExtractor` — Foundation Models fills venue / run / caption captures (PR open, not merged)
 - [x] App icon — `AppIcon.icon` (Icon Composer): a warm-tinted full moon on a night sky, the moon the wafer was likened to
 - [ ] About with the name's origin
 
@@ -485,7 +490,7 @@ Update this section as you complete items.
 
 ### Web metadata
 
-8. **Do not try to parse the run out of a page.** Venue sites write it as 「2026年4月11日(土)〜6月21日(日)」, `4/11 - 6/21`, 「会期：令和8年…」, and very often as text baked into an image. A parser that's wrong some of the time silently writes bad data, which is worse than typing two dates. Autofill the **title and image only**; the run is always hand-entered.
+8. **Do not try to parse the run out of a page with a regex.** Venue sites write it as 「2026年4月11日(土)〜6月21日(日)」, `4/11 - 6/21`, 「会期：令和8年…」, and very often as text baked into an image. A parser that's wrong some of the time silently writes bad data, which is worse than typing two dates. OGP autofills the **title and image only**. `SpotExtractor` (the on-device model) may *propose* a run, and the rule for it is the same in different clothes: never silently — `isRunSuggested` keeps the form saying so until the user touches a date, dates outside a plausible window are dropped, and a `shop` never gets any.
 9. **Read at most the first 64 KB** of the response — OG tags are always in `<head>`. Decode `.utf8` with an `.isoLatin1` fallback.
 10. **Fall back silently.** A page with no OG tags is normal; leave the fields empty and let the user type. Never surface a fetch failure as an error alert. Same for `MapLinkResolver` — an unparsed link still produces a usable spot.
 

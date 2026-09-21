@@ -56,7 +56,9 @@ struct SpotFormView: View {
         .environment(\.timeZone, Calendar.monaka.timeZone)
         .sheet(isPresented: $isPickingLocation) {
             LocationPickerView(
-                initialQuery: draft.location?.name ?? draft.venue,
+                // An address the text spelled out beats a venue name for
+                // finding the exact building.
+                initialQuery: draft.location?.name ?? draft.suggestedAddress ?? draft.venue,
                 current: draft.location
             ) { location in
                 draft.location = location
@@ -87,10 +89,18 @@ struct SpotFormView: View {
                 if isFetchingMetadata {
                     ProgressView()
                 } else if draft.urlString.isEmpty {
-                    PasteButton(payloadType: URL.self) { urls in
-                        guard let url = urls.first else { return }
-                        draft.urlString = url.absoluteString
-                        Task { await autofill() }
+                    // Text, not URL: a copied link is text too, and so is
+                    // a post's caption, which has no link in it.
+                    PasteButton(payloadType: String.self) { strings in
+                        guard let pasted = strings.first?.trimmingCharacters(in: .whitespacesAndNewlines),
+                              !pasted.isEmpty
+                        else { return }
+                        if let url = ShareInputResolver.firstURL(in: pasted) {
+                            draft.urlString = url.absoluteString
+                            Task { await autofill() }
+                        } else {
+                            Task { await adoptCaption(pasted) }
+                        }
                     }
                     .labelStyle(.iconOnly)
                     .buttonBorderShape(.capsule)
@@ -109,7 +119,11 @@ struct SpotFormView: View {
         } header: {
             Text("Link")
         } footer: {
-            Text("Fills in the title, image and venue from the page. Dates are always typed by hand.")
+            if SpotExtractor.isAvailable {
+                Text("Paste a link, or a post's caption. Fills in the title, image, venue and — read from the text — the dates, marked so you can check them.")
+            } else {
+                Text("Fills in the title, image and venue from the page. Dates are always typed by hand.")
+            }
         }
         // Leaving the field is as clear a "that's the URL" as hitting Return,
         // and it's what a paste-then-tap-away actually does.
@@ -136,6 +150,25 @@ struct SpotFormView: View {
         // coordinates instead of being fetched as a web page (§8.1).
         let resolved = await ShareInputResolver().resolve(.url(url))
         draft.fillEmptyFields(from: resolved)
+
+        // Then the on-device model, for what OGP can't give: a venue named
+        // in the body and the run. It only ever fills what is still empty,
+        // and the run it proposes is flagged as such.
+        guard !MapLinkResolver.isMapLink(url), SpotExtractor.isAvailable,
+              let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank)
+        else { return }
+        draft.fillEmptyFields(from: extraction)
+    }
+
+    /// A pasted caption with no link in it — an Instagram post about a café.
+    /// The model finds the name; the caption itself goes to Notes.
+    private func adoptCaption(_ caption: String) async {
+        guard SpotExtractor.isAvailable else { return }
+        isFetchingMetadata = true
+        defer { isFetchingMetadata = false }
+        if let extraction = await SpotExtractor().extract(fromText: caption) {
+            draft.adopt(extraction, caption: caption)
+        }
     }
 
     // MARK: - Location

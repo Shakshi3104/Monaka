@@ -17,6 +17,7 @@ struct ShareFormView: View {
 
     @State private var draft = SpotDraft()
     @State private var isResolving = true
+    @State private var isExtracting = false
     @State private var saveFailed = false
 
     private var isSaveable: Bool {
@@ -34,6 +35,11 @@ struct ShareFormView: View {
                         HStack(spacing: 6) {
                             ProgressView()
                             Text("Reading the page…")
+                        }
+                    } else if isExtracting {
+                        HStack(spacing: 6) {
+                            ProgressView()
+                            Text("Reading it for the name, place and dates…")
                         }
                     }
                 }
@@ -73,9 +79,36 @@ struct ShareFormView: View {
                 Text("Monaka's shared store is unavailable.")
             }
             .task {
-                defer { isResolving = false }
-                guard let input = await load() else { return }
-                draft.fillEmptyFields(from: await ShareInputResolver().resolve(input))
+                guard let input = await load() else { isResolving = false; return }
+                let resolved = await ShareInputResolver().resolve(input)
+                draft.fillEmptyFields(from: resolved)
+                isResolving = false
+
+                // The on-device model reads the body for the venue and the
+                // run. Save is live throughout — a share is two taps, and this
+                // is a few seconds; saving first just means typing the dates.
+                guard SpotExtractor.isAvailable else { return }
+                isExtracting = true
+                defer { isExtracting = false }
+                switch input {
+                case let .text(text) where ShareInputResolver.firstURL(in: text) == nil:
+                    // A caption. The resolver made the whole thing the title;
+                    // the model finds the name in it.
+                    if let extraction = await SpotExtractor().extract(fromText: text) {
+                        draft.adopt(extraction, caption: text)
+                    }
+                case let .text(text):
+                    // "name https://…" — the URL is the page to read.
+                    guard let url = ShareInputResolver.firstURL(in: text), !MapLinkResolver.isMapLink(url) else { return }
+                    if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
+                        draft.fillEmptyFields(from: extraction)
+                    }
+                case let .url(url):
+                    guard !MapLinkResolver.isMapLink(url) else { return }
+                    if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
+                        draft.fillEmptyFields(from: extraction)
+                    }
+                }
             }
         }
     }
