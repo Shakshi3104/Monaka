@@ -464,7 +464,7 @@ MonakaShare/                        share extension target (Phase 2)
 ### Phase 4 — Beyond
 - [ ] `CalendarView` (month grid with run bars)
 - [ ] Photos taken on the visit
-- [ ] `SpotExtractor` — Foundation Models fills venue / run / caption captures (PR open, not merged)
+- [x] `SpotExtractor` — Foundation Models proposes venue / run, and a caption's name (§8.1)
 - [x] App icon — `AppIcon.icon` (Icon Composer): a warm-tinted full moon on a night sky, the moon the wafer was likened to
 - [ ] About with the name's origin
 
