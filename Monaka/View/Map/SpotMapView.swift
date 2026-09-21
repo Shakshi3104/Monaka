@@ -6,7 +6,9 @@
 //  "I'm around here, what did I want to go to" view.
 //
 //  It never asks for location — that only happens when distance sort is turned
-//  on (§7.3, §13-14).
+//  on (§7.3, §13-14). Once that's been granted, though, the map shows where
+//  you are and can centre on it; reading the authorization status prompts
+//  nothing.
 //
 
 import SwiftUI
@@ -25,6 +27,9 @@ struct SpotMapView: View {
     @State private var selectedSpotID: UUID?
     @State private var isShowingUnpinned = false
     @State private var today: Date = .now
+    /// Read, never requested. `MapUserLocationButton` asks for permission
+    /// when tapped, so it only exists once permission is already there.
+    @State private var isLocationAuthorized = false
 
     /// Tokyo, for when there is nothing to frame yet.
     private static let fallbackRegion = MKCoordinateRegion(
@@ -101,7 +106,10 @@ struct SpotMapView: View {
             }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { today = .now }
+            if phase == .active {
+                today = .now
+                refreshLocationAccess()
+            }
         }
     }
 
@@ -109,6 +117,9 @@ struct SpotMapView: View {
 
     private var map: some View {
         Map(position: $camera, selection: $selectedSpotID) {
+            if isLocationAuthorized {
+                UserAnnotation()
+            }
             ForEach(pinned) { spot in
                 if let coordinate = spot.coordinate {
                     Marker(spot.title, systemImage: icon(for: spot), coordinate: coordinate)
@@ -118,6 +129,11 @@ struct SpotMapView: View {
             }
         }
         .mapStyle(.standard(pointsOfInterest: .excludingAll))
+        .mapControls {
+            if isLocationAuthorized {
+                MapUserLocationButton()
+            }
+        }
         .safeAreaInset(edge: .bottom) {
             if let selected {
                 selectionCard(selected)
@@ -128,7 +144,17 @@ struct SpotMapView: View {
         }
         .animation(.snappy(duration: 0.25), value: selectedSpotID)
         .onAppear {
+            refreshLocationAccess()
             camera = .region(Self.region(framing: pinned.compactMap(\.coordinate)))
+        }
+    }
+
+    /// Permission can change in Settings while the app is away, or by turning
+    /// distance sort on — re-read whenever the tab comes back.
+    private func refreshLocationAccess() {
+        switch CLLocationManager().authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse: isLocationAuthorized = true
+        default: isLocationAuthorized = false
         }
     }
 

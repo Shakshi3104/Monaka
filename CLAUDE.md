@@ -264,7 +264,7 @@ It reorders **within** each section, never across them — `Anytime` is where it
 
 While it's on, a row shows the distance under the countdown — both, since one says how long you've got and the other how far it is.
 
-**Request location only when the user turns that toggle on.** Never at launch, never on first import, never on opening the Map tab. `INFOPLIST_KEY_NSLocationWhenInUseUsageDescription` explains it in those terms. The app is fully usable with location denied — `LocationProvider.access` becomes `.denied`, Settings says so, and the lists keep their usual order.
+**Request location only when the user turns that toggle on.** Never at launch, never on first import, never on opening the Map tab. Once granted, the Map tab shows the user dot and a `MapUserLocationButton` — it *reads* the authorization status, which prompts nothing, and the button only exists when permission is already there (tapping it would otherwise ask). `INFOPLIST_KEY_NSLocationWhenInUseUsageDescription` explains it in those terms. The app is fully usable with location denied — `LocationProvider.access` becomes `.denied`, Settings says so, and the lists keep their usual order.
 
 ---
 
