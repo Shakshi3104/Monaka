@@ -63,9 +63,11 @@ struct SpotDetailView: View {
         // colliding with the map snapshot halfway through a scroll.
         .safeAreaBar(edge: .bottom) { visitedBar }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            // Edit is the thing you come here to do, so it's a button, not a
+            // menu item. Share and Delete are the rare ones and stay tucked.
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button("Edit", systemImage: "pencil") { isEditing = true }
                 Menu {
-                    Button("Edit", systemImage: "pencil") { isEditing = true }
                     if let pageURL {
                         ShareLink(item: pageURL) {
                             Label("Share Link", systemImage: "square.and.arrow.up")
