@@ -23,6 +23,8 @@ struct SpotListView: View {
     @AppStorage("sortsByDistance") private var sortsByDistance = false
     @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
 
+    @Environment(AppRouter.self) private var router
+    @State private var path = NavigationPath()
     @State private var locationProvider = LocationProvider()
     @State private var today: Date = .now
     @State private var selectedTag: String?
@@ -85,7 +87,7 @@ struct SpotListView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if spots.isEmpty {
                     ContentUnavailableView(
@@ -125,6 +127,12 @@ struct SpotListView: View {
                 // Only resumes what the user already opted into.
                 if sortsByDistance { locationProvider.start() }
             }
+        }
+        // A tapped reminder. The spot may be gone by then — then nothing.
+        .onChange(of: router.pendingSpotID, initial: true) { _, id in
+            guard let id, let spot = spots.first(where: { $0.id == id }) else { return }
+            router.pendingSpotID = nil
+            path = NavigationPath([spot])
         }
     }
 
