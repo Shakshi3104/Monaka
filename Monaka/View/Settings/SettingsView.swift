@@ -25,6 +25,8 @@ struct SettingsView: View {
     /// noise: neither is somewhere you can still go.
     @AppStorage("hidesEndedSection") private var hidesEndedSection = false
     @AppStorage("hidesVisitedSection") private var hidesVisitedSection = false
+    @AppStorage("mapShowsVisited") private var mapShowsVisited = false
+    @AppStorage("mapShowsEnded") private var mapShowsEnded = false
     @AppStorage("sortsByDistance") private var sortsByDistance = false
     @AppStorage(RunReminder.storageKey) private var remindsBeforeEnd = false
     @State private var reminderAccess: RunReminder.Access = .notDetermined
@@ -56,7 +58,16 @@ struct SettingsView: View {
                 } header: {
                     Text("All")
                 } footer: {
-                    Text("Ended holds the runs you missed, Visited the spots you've checked off. Hiding them keeps the All tab to places you can still go. Both stay on the map.")
+                    Text("Ended holds the runs you missed, Visited the spots you've checked off. Hiding them keeps the All tab to places you can still go.")
+                }
+
+                Section {
+                    Toggle("Show Visited Spots", isOn: $mapShowsVisited)
+                    Toggle("Show Ended Spots", isOn: $mapShowsEnded)
+                } header: {
+                    Text("Map")
+                } footer: {
+                    Text("The map shows places you can still go. Turn these on to pin the ones you've been to, or missed, as well.")
                 }
 
                 Section {

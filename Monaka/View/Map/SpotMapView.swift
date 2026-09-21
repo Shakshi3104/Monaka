@@ -19,9 +19,12 @@ struct SpotMapView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Query private var spots: [Spot]
 
+    /// Both live in Settings → Map; the toolbar is for the tag filter.
     @AppStorage("mapShowsVisited") private var showsVisited = false
     @AppStorage("mapShowsEnded") private var showsEnded = false
     @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
+
+    @State private var selectedTag: String?
 
     @State private var camera: MapCameraPosition = .automatic
     @State private var selectedSpotID: UUID?
@@ -45,6 +48,7 @@ struct SpotMapView: View {
     private var pinned: [Spot] {
         spots.filter { spot in
             guard spot.hasCoordinate else { return false }
+            if let selectedTag, !spot.tags.contains(selectedTag) { return false }
             if spot.isVisited { return showsVisited }
             if spot.hasEnded(on: today) { return showsEnded }
             return true
@@ -75,6 +79,7 @@ struct SpotMapView: View {
                 }
             }
             .navigationTitle("Map")
+            .navigationSubtitle(selectedTag.map { "Tagged \($0)" } ?? "")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // Everything trailing, as on the All tab.
@@ -90,11 +95,8 @@ struct SpotMapView: View {
                         }
                         .accessibilityLabel("\(unpinned.count) spots not on the map")
                     }
-                    Menu {
-                        Toggle("Show Visited", isOn: $showsVisited)
-                        Toggle("Show Ended", isOn: $showsEnded)
-                    } label: {
-                        Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
+                    if !spots.tagsInUse.isEmpty {
+                        TagFilterMenu(tags: spots.tagsInUse, selection: $selectedTag)
                     }
                 }
             }

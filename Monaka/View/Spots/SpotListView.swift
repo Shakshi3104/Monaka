@@ -21,7 +21,6 @@ struct SpotListView: View {
     @AppStorage("hidesEndedSection") private var hidesEndedSection = false
     @AppStorage("hidesVisitedSection") private var hidesVisitedSection = false
     @AppStorage("sortsByDistance") private var sortsByDistance = false
-    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
 
     @Environment(AppRouter.self) private var router
     @State private var path = NavigationPath()
@@ -57,12 +56,7 @@ struct SpotListView: View {
         return visible
     }
 
-    private var allTags: [String] {
-        var seen = Set<String>()
-        return spots.flatMap(\.tags)
-            .filter { seen.insert($0).inserted }
-            .sorted { $0.localizedCompare($1) == .orderedAscending }
-    }
+    private var allTags: [String] { spots.tagsInUse }
 
     private var sections: [(section: SpotSection, spots: [Spot])] {
         // A search is explicit, so it looks past the Hide Ended / Hide
@@ -107,7 +101,7 @@ struct SpotListView: View {
                 // whatever the nav stack needs.
                 ToolbarItemGroup(placement: .primaryAction) {
                     if !allTags.isEmpty {
-                        tagFilterMenu
+                        TagFilterMenu(tags: allTags, selection: $selectedTag)
                     }
                     Button("Settings", systemImage: "gear") {
                         isShowingSettings = true
@@ -133,23 +127,6 @@ struct SpotListView: View {
             guard let id, let spot = spots.first(where: { $0.id == id }) else { return }
             router.pendingSpotID = nil
             path = NavigationPath([spot])
-        }
-    }
-
-    private var tagFilterMenu: some View {
-        Menu {
-            Picker("Tag", selection: $selectedTag) {
-                Label("All Spots", systemImage: "circle.grid.2x2").tag(String?.none)
-                ForEach(allTags, id: \.self) { tag in
-                    Label(tag, systemImage: TagVocabulary.icon(for: tag, in: vocabularyRaw))
-                        .tag(String?.some(tag))
-                }
-            }
-        } label: {
-            Label(
-                "Filter",
-                systemImage: selectedTag == nil ? "tag" : "tag.fill"
-            )
         }
     }
 

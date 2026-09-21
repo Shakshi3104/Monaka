@@ -396,6 +396,7 @@ Monaka/
 │   ├── LocationProvider.swift      CoreLocation, When In Use, requested lazily
 │   └── RunReminder.swift           local notification 3 days before a run ends, opt-in (Phase 3)
 └── View/
+    ├── TagFilterMenu.swift         the tag filter menu All and Map share
     ├── ClearableTextField.swift    TextField + ⓧ, both forms (duplicated in MonakaShare/)
     ├── Today/
     │   └── TodayView.swift         featured pick + This Weekend / Ending Soon / Open Now
@@ -458,7 +459,7 @@ MonakaShare/                        share extension target (Phase 2)
 - [x] `MapLinkResolver` — share a place from Google Maps (§8.2)
 - [x] `Anytime` collapsing (§7.3)
 - [x] Distance sort + `LocationProvider` (§7.3) — applies within every section
-- [x] `SpotMapView` — pins tinted by countdown, selection card, unpinned-spots sheet
+- [x] `SpotMapView` — pins tinted by countdown, selection card, unpinned-spots sheet, the same tag filter as All (`TagFilterMenu`); Show Visited / Show Ended live in Settings → Map
 - [x] Tag management — `SettingsView` + `TagsView` (rename / delete across spots), tag filter in the All tab
 - [x] Hide Ended / Hide Visited from Settings (§7.2)
 
