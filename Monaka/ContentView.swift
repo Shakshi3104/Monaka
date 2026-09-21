@@ -37,6 +37,8 @@ struct ContentView: View {
         #endif
     }()
 
+    @Environment(AppRouter.self) private var router
+
     var body: some View {
         TabView(selection: $selection) {
             Tab("Today", systemImage: "sun.horizon", value: AppTab.today) {
@@ -69,6 +71,10 @@ struct ContentView: View {
             guard current == .add else { return }
             selection = previous == .add ? .today : previous
             isAddingSpot = true
+        }
+        // A tapped reminder lands on the All tab, which pushes the spot.
+        .onChange(of: router.pendingSpotID, initial: true) { _, id in
+            if id != nil { selection = .all }
         }
         .sheet(isPresented: $isAddingSpot) {
             AddSpotView()

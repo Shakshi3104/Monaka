@@ -26,6 +26,8 @@ struct SettingsView: View {
     @AppStorage("hidesEndedSection") private var hidesEndedSection = false
     @AppStorage("hidesVisitedSection") private var hidesVisitedSection = false
     @AppStorage("sortsByDistance") private var sortsByDistance = false
+    @AppStorage(RunReminder.storageKey) private var remindsBeforeEnd = false
+    @State private var reminderAccess: RunReminder.Access = .notDetermined
 
     let locationProvider: LocationProvider
 
@@ -55,6 +57,23 @@ struct SettingsView: View {
                     Text("All")
                 } footer: {
                     Text("Ended holds the runs you missed, Visited the spots you've checked off. Hiding them keeps the All tab to places you can still go. Both stay on the map.")
+                }
+
+                Section {
+                    Toggle("Remind Me Before a Run Ends", isOn: $remindsBeforeEnd)
+                } header: {
+                    Text("Reminders")
+                } footer: {
+                    // Phase 3 — this toggle is the only thing that asks for
+                    // notification permission.
+                    switch reminderAccess {
+                    case .denied:
+                        Text("Notifications are off for Monaka in Settings, so no reminder can be sent.")
+                    case .notDetermined:
+                        Text("A notification at \(RunReminder.hour):00, \(RunReminder.leadDays) days before a run ends, for spots you haven't visited. Turning this on asks for permission once.")
+                    case .authorized:
+                        Text("A notification at \(RunReminder.hour):00, \(RunReminder.leadDays) days before a run ends, for spots you haven't visited.")
+                    }
                 }
 
                 Section {
@@ -89,6 +108,14 @@ struct SettingsView: View {
             }
             .onChange(of: sortsByDistance) { _, isOn in
                 if isOn { locationProvider.start() } else { locationProvider.stop() }
+            }
+            .task { reminderAccess = await RunReminder.access() }
+            .onChange(of: remindsBeforeEnd) { _, isOn in
+                guard isOn else { return }
+                Task {
+                    if reminderAccess == .notDetermined { _ = await RunReminder.requestAccess() }
+                    reminderAccess = await RunReminder.access()
+                }
             }
         }
     }
