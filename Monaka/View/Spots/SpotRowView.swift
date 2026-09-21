@@ -23,10 +23,10 @@ struct SpotRowView: View {
         return distance.formattedDistance
     }
 
-    /// `venue · 2026/04/11 – 06/21`. Falls back to the tags so a bare
-    /// Anytime spot doesn't render an empty second line.
+    /// `venue · 04/11 – 06/21`. Falls back to the tags so a bare Anytime
+    /// spot doesn't render an empty second line.
     private var subtitle: String? {
-        var parts = [spot.venue, spot.hasRun ? spot.runText : nil].compactMap { $0 }
+        var parts = [spot.venue, spot.hasRun ? spot.compactRunText(on: date) : nil].compactMap { $0 }
         if parts.isEmpty { parts = spot.tags }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }

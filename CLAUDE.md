@@ -200,7 +200,7 @@ Use Xcode 27.0 at `/Applications/Xcode.app` (`export DEVELOPER_DIR=/Applications
 
 ### 6.3 List rows
 
-`[thumbnail] [title (lineLimit 1) + venue · run] [trailing tag]`. The trailing tag is the countdown (`12 days left`), tinted `.accentColor` while open, `.orange` when ending soon, `.green` when visited. Title is struck through and `.secondary` once visited.
+`[thumbnail] [title (lineLimit 1) + venue · run] [trailing tag]`. The run in a row is `Spot.compactRunText` (`4/11 – 6/21`, year only on a date outside the current year: `12/20 – 2027/1/10`) so the end date survives beside the venue; the detail view and the Today card keep the full `yyyy/MM/dd`. The trailing tag is the countdown (`12 days left`), tinted `.accentColor` while open, `.orange` when ending soon, `.green` when visited. Title is struck through and `.secondary` once visited.
 
 ---
 
