@@ -154,10 +154,17 @@ struct SpotFormView: View {
         // Then the on-device model, for what OGP can't give: a venue named
         // in the body and the run. It only ever fills what is still empty,
         // and the run it proposes is flagged as such.
-        guard !MapLinkResolver.isMapLink(url), SpotExtractor.isAvailable,
-              let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank)
-        else { return }
-        draft.fillEmptyFields(from: extraction)
+        guard !MapLinkResolver.isMapLink(url), SpotExtractor.isAvailable else { return }
+        if ShareInputResolver.isSocialPost(url) {
+            // The caption is the page. The og:title (“user on Instagram: …”)
+            // is no title, so this path replaces it.
+            guard let caption = resolved.notes.nilIfBlank,
+                  let extraction = await SpotExtractor().extract(fromText: caption)
+            else { return }
+            draft.adopt(extraction, caption: caption)
+        } else if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
+            draft.fillEmptyFields(from: extraction)
+        }
     }
 
     /// A pasted caption with no link in it — an Instagram post about a café.
@@ -362,31 +369,6 @@ extension View {
 
 /// Its own view so `dismiss` resolves against the sheet the dialog was
 /// attached to rather than whatever presented it.
-/// A text field with the ⓧ that autofilled text needs: a title pulled from
-/// a page is often nearly right, and retyping beats backspacing through it.
-/// Same glyph as the image row's remove button, so the form reads as one.
-struct ClearableTextField: View {
-    let title: LocalizedStringKey
-    @Binding var text: String
-
-    init(_ title: LocalizedStringKey, text: Binding<String>) {
-        self.title = title
-        _text = text
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            TextField(title, text: $text)
-            if !text.isEmpty {
-                Button("Clear", systemImage: "xmark.circle.fill") { text = "" }
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(.secondary)
-                    .buttonStyle(.plain)
-            }
-        }
-    }
-}
-
 struct DiscardChangesButtons: View {
     @Environment(\.dismiss) private var dismiss
 

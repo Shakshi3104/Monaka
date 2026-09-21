@@ -59,16 +59,52 @@ struct ShareInputResolver: Sendable {
     }
 
     /// `title`, `imageURL`, `venue` (`og:site_name`), `urlString`.
+    ///
+    /// A social post is different: its site name (“Instagram”) is no venue,
+    /// and its description is the caption — the text that actually says
+    /// where this is — so that goes to `notes`, where `SpotExtractor` can
+    /// read it and the user can keep it.
     private func resolveWebPage(_ url: URL) async -> SpotDraft {
         var draft = SpotDraft()
         draft.urlString = url.absoluteString
 
         guard let metadata = try? await OGMetadataFetcher().fetch(url) else { return draft }
-        draft.title = metadata.title ?? ""
-        draft.venue = metadata.siteName ?? ""
         draft.imageURL = metadata.imageURL
+        if Self.isSocialPost(url) {
+            draft.title = Self.socialTitle(metadata.title ?? "")
+            draft.notes = metadata.description ?? ""
+        } else {
+            draft.title = metadata.title ?? ""
+            draft.venue = metadata.siteName ?? ""
+        }
         return draft
     }
+
+    /// `user on Instagram: "【銀座】実はここ超穴場…！990円で…"` → `【銀座】実はここ超穴場…！`.
+    /// The wrapper is the network's, the first line of the caption is the
+    /// post's. Still not a place's name — `SpotExtractor` replaces this when
+    /// it can — but it's what you'd type if you had to.
+    static func socialTitle(_ ogTitle: String) -> String {
+        var text = ogTitle
+        if let range = text.range(of: #"^.+? on (Instagram|Threads|X|Twitter|TikTok|Facebook):\s*"#, options: .regularExpression) {
+            text = String(text[range.upperBound...])
+        }
+        text = text.trimmingCharacters(in: CharacterSet(charactersIn: "\"“”「」 \n"))
+        let firstLine = text.split(whereSeparator: \.isNewline).first.map(String.init) ?? text
+        return firstLine.trimmingCharacters(in: .whitespaces)
+    }
+
+    /// A post on a social network, where the page is a wrapper around a
+    /// caption and the site name says nothing about the place.
+    static func isSocialPost(_ url: URL) -> Bool {
+        guard let host = url.host()?.lowercased() else { return false }
+        return socialHosts.contains { host == $0 || host.hasSuffix("." + $0) }
+    }
+
+    private static let socialHosts: [String] = [
+        "instagram.com", "threads.net", "threads.com", "x.com", "twitter.com",
+        "facebook.com", "tiktok.com", "youtube.com", "youtu.be", "note.com"
+    ]
 
     /// Shares often arrive as "some text https://…" in one string.
     static func firstURL(in text: String) -> URL? {
