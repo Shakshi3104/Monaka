@@ -26,6 +26,7 @@ struct SpotListView: View {
     @State private var locationProvider = LocationProvider()
     @State private var today: Date = .now
     @State private var selectedTag: String?
+    @State private var searchText = ""
     /// §4 — Settings is a sheet off a gear nothing outside the app can tap.
     @State private var isShowingSettings = {
         #if DEBUG
@@ -40,9 +41,18 @@ struct SpotListView: View {
 
     private static let anytimeCollapseThreshold = 8
 
+    private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var isSearching: Bool { !query.isEmpty }
+
     private var visibleSpots: [Spot] {
-        guard let selectedTag else { return spots }
-        return spots.filter { $0.tags.contains(selectedTag) }
+        var visible = spots
+        if let selectedTag {
+            visible = visible.filter { $0.tags.contains(selectedTag) }
+        }
+        if isSearching {
+            visible = visible.filter { $0.matches(query) }
+        }
+        return visible
     }
 
     private var allTags: [String] {
@@ -53,9 +63,12 @@ struct SpotListView: View {
     }
 
     private var sections: [(section: SpotSection, spots: [Spot])] {
+        // A search is explicit, so it looks past the Hide Ended / Hide
+        // Visited toggles — the spot you're typing the name of may well be
+        // one you've already been to.
         SpotSection.grouped(visibleSpots, on: today, weekend: .lastChance)
-            .filter { !(hidesEndedSection && $0.section == .ended) }
-            .filter { !(hidesVisitedSection && $0.section == .visited) }
+            .filter { isSearching || !(hidesEndedSection && $0.section == .ended) }
+            .filter { isSearching || !(hidesVisitedSection && $0.section == .visited) }
             .map { section, spots in (section, sortedByDistanceIfAsked(spots)) }
     }
 
@@ -134,8 +147,22 @@ struct SpotListView: View {
 
     private var list: some View {
         List {
+            // A field in the list rather than `.searchable`: with a tab in
+            // the bar's search/prominent slot, the system search never
+            // appears on this tab in any placement.
+            Section {
+                searchField
+            }
+            if isSearching, sections.isEmpty {
+                Section {
+                    ContentUnavailableView.search(text: query)
+                        .listRowBackground(Color.clear)
+                }
+            }
             ForEach(sections, id: \.section) { section, spots in
-                if section == .anytime, spots.count > Self.anytimeCollapseThreshold {
+                // A search result hidden behind a disclosure is no result at
+                // all, so Anytime stays open while searching.
+                if section == .anytime, !isSearching, spots.count > Self.anytimeCollapseThreshold {
                     Section {
                         DisclosureGroup(isExpanded: $isAnytimeExpanded) {
                             rows(spots)
@@ -153,6 +180,26 @@ struct SpotListView: View {
                         rows(spots)
                     }
                 }
+            }
+        }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Title, venue or tag", text: $searchText)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
             }
         }
     }
