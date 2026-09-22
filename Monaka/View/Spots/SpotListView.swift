@@ -15,9 +15,6 @@ struct SpotListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var spots: [Spot]
 
-    /// Collapsed above this many rows so the Anytime backlog can't bury the
-    /// dated spots (§7.3).
-    @AppStorage("isAnytimeExpanded") private var isAnytimeExpanded = false
     @AppStorage("hidesEndedSection") private var hidesEndedSection = false
     @AppStorage("hidesVisitedSection") private var hidesVisitedSection = false
     @AppStorage("sortsByDistance") private var sortsByDistance = false
@@ -39,8 +36,6 @@ struct SpotListView: View {
         false
         #endif
     }()
-
-    private static let anytimeCollapseThreshold = 8
 
     private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var isSearching: Bool { !query.isEmpty }
@@ -145,24 +140,19 @@ struct SpotListView: View {
                 }
             }
             ForEach(sections, id: \.section) { section, spots in
-                // A search result hidden behind a disclosure is no result at
-                // all, so Anytime stays open while searching.
-                if section == .anytime, !isSearching, spots.count > Self.anytimeCollapseThreshold {
-                    Section {
-                        DisclosureGroup(isExpanded: $isAnytimeExpanded) {
-                            rows(spots)
-                        } label: {
-                            HStack {
-                                Text(section.title)
-                                Spacer()
-                                Text("\(spots.count)")
-                                    .foregroundStyle(.secondary)
-                            }
+                Section {
+                    rows(spots)
+                } header: {
+                    HStack {
+                        Text(section.title)
+                        Spacer()
+                        // A count, not a disclosure: Anytime is long, and
+                        // knowing how long is the useful half of collapsing
+                        // it. Searching is what actually finds one of them.
+                        if section == .anytime, spots.count > 1 {
+                            Text("\(spots.count)")
+                                .foregroundStyle(.secondary)
                         }
-                    }
-                } else {
-                    Section(section.title) {
-                        rows(spots)
                     }
                 }
             }
