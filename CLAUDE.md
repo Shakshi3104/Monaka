@@ -287,7 +287,7 @@ The share extension and the in-app URL field both hand their input to `ShareInpu
 | any other URL | `OGMetadataFetcher` | `title`, `imageURL`, `venue` (`og:site_name`), `urlString` |
 | plain text | `SpotExtractor` (a caption) | `title` (the place's name), `venue`, `notes` (the caption), `suggestedAddress`; a run only for an exhibition / event / pop-up |
 
-After the OGP step, any web page also goes through `SpotExtractor` for what OGP can't give: a venue named in the body and the run. It fills **only empty fields**, and a run it proposes sets `SpotDraft.isRunSuggested` so the form says "Read from the page — check it against the site" until a date is touched. The model is asked whether the page is about *one* thing and what kind (`shop` never gets dates), and is grounded on the OGP title; listing pages and homepages can still yield their first item, which is why the run is a flagged suggestion and never a silent write.
+After the OGP step, any web page also goes through `SpotExtractor` for what OGP can't give: a venue named in the body and the run. It fills **only empty fields**, and a run it proposes sets `SpotDraft.isRunSuggested` so the form says "Read from the page — check it against the site" until a date is touched. The model is asked whether the page is about *one* thing and what kind (`shop` never gets dates, and a shop is its own venue — `venue = title`, as a Google Maps place arrives), and is grounded on the OGP title; Save is disabled in every form while the page is being read; listing pages and homepages can still yield their first item, which is why the run is a flagged suggestion and never a silent write.
 
 A resolver that fails fills nothing and is not an error (§13). The form opens either way.
 

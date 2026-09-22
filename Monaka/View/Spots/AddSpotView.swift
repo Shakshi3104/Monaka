@@ -16,6 +16,8 @@ struct AddSpotView: View {
     /// Prefilled by a capture route; empty when typed by hand.
     var draft: SpotDraft = SpotDraft()
 
+    /// The form is reading a page; Save waits for it.
+    @State private var isFormBusy = false
     @State private var form = SpotDraft()
     @State private var hasLoadedDraft = false
     @State private var isConfirmingDiscard = false
@@ -26,7 +28,7 @@ struct AddSpotView: View {
 
     var body: some View {
         NavigationStack {
-            SpotFormView(draft: $form, requiresLocation: true)
+            SpotFormView(draft: $form, requiresLocation: true, isBusy: $isFormBusy)
                 .navigationTitle("New Spot")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -37,7 +39,7 @@ struct AddSpotView: View {
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") { save() }
-                            .disabled(!form.isAddable)
+                            .disabled(!form.isAddable || isFormBusy)
                     }
                 }
                 .discardChangesGuard(hasChanges: hasChanges, isPresented: $isConfirmingDiscard)

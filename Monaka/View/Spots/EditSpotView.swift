@@ -15,6 +15,8 @@ struct EditSpotView: View {
 
     let spot: Spot
 
+    /// The form is reading a page; Save waits for it.
+    @State private var isFormBusy = false
     @State private var form: SpotDraft
     @State private var isConfirmingDiscard = false
 
@@ -33,7 +35,7 @@ struct EditSpotView: View {
 
     var body: some View {
         NavigationStack {
-            SpotFormView(draft: $form)
+            SpotFormView(draft: $form, isBusy: $isFormBusy)
                 .navigationTitle("Edit Spot")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -44,7 +46,7 @@ struct EditSpotView: View {
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") { save() }
-                            .disabled(!form.isSaveable)
+                            .disabled(!form.isSaveable || isFormBusy)
                     }
                 }
                 .discardChangesGuard(hasChanges: hasChanges, isPresented: $isConfirmingDiscard)

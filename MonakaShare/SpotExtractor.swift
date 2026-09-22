@@ -22,6 +22,10 @@ import FoundationModels
 
 struct SpotExtractor: Sendable {
     struct Extraction: Equatable, Sendable {
+        /// What the text is about. A shop's own name is its venue, so the
+        /// form gets the same string in both fields — a café saved from
+        /// Google Maps arrives that way too (§3).
+        var isShop = false
         var title: String?
         var venue: String?
         /// A street address the text spells out. Not stored on the spot —
@@ -142,8 +146,9 @@ struct SpotExtractor: Sendable {
         // A homepage or a listing yields whatever the model noticed first —
         // "オンライン限定", a one-day news item. Nothing from those.
         guard answer.isAboutOneThing else { return extraction }
+        extraction.isShop = answer.kind == .shop
         extraction.title = answer.title?.cleaned
-        extraction.venue = answer.venue?.cleaned
+        extraction.venue = extraction.isShop ? extraction.title : answer.venue?.cleaned
         extraction.address = answer.address?.cleaned
 
         // A café's "run" is a seasonal menu or the posting date (§13-8).
@@ -190,7 +195,11 @@ extension SpotDraft {
     /// date is set, and is flagged as suggested.
     mutating func fillEmptyFields(from extraction: SpotExtractor.Extraction) {
         if title.isEmpty, let title = extraction.title { self.title = title }
-        if venue.isEmpty, let venue = extraction.venue { self.venue = venue }
+        if venue.isEmpty {
+            // A shop is its own venue — even when OGP already named it.
+            if extraction.isShop, !title.isEmpty { venue = title }
+            else if let venue = extraction.venue { self.venue = venue }
+        }
         if suggestedAddress == nil { suggestedAddress = extraction.address }
         if startDate == nil, endDate == nil, extraction.startDate != nil || extraction.endDate != nil {
             startDate = extraction.startDate
@@ -206,7 +215,7 @@ extension SpotDraft {
     mutating func adopt(_ extraction: SpotExtractor.Extraction, caption: String) {
         guard let title = extraction.title else { return }
         self.title = title
-        venue = extraction.venue ?? ""
+        venue = extraction.isShop ? title : (extraction.venue ?? "")
         suggestedAddress = extraction.address
         if notes.isEmpty { notes = caption.trimmingCharacters(in: .whitespacesAndNewlines) }
         if extraction.startDate != nil || extraction.endDate != nil {

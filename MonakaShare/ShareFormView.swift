@@ -69,8 +69,10 @@ struct ShareFormView: View {
                     Button("Cancel") { onCancel() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
+                    // Saving mid-read would keep a title the next second
+                    // replaces, so Save waits for the model too.
                     Button("Save") { save() }
-                        .disabled(!isSaveable || isResolving)
+                        .disabled(!isSaveable || isResolving || isExtracting)
                 }
             }
             .alert("Couldn't Save", isPresented: $saveFailed) {
@@ -85,8 +87,8 @@ struct ShareFormView: View {
                 isResolving = false
 
                 // The on-device model reads the body for the venue and the
-                // run. Save is live throughout — a share is two taps, and this
-                // is a few seconds; saving first just means typing the dates.
+                // run. Save waits for it: a few seconds, and what it writes
+                // is what you'd otherwise type.
                 guard SpotExtractor.isAvailable else { return }
                 isExtracting = true
                 defer { isExtracting = false }
