@@ -253,7 +253,7 @@ The upcoming weekend is the one we're currently inside if today is Sat/Sun, othe
 
 Once Google Maps places are imported, `Anytime` will hold an order of magnitude more rows than every dated section combined, and a naive list buries the exhibitions — the thing the app exists for — under a hundred cafés. Two rules keep that from happening:
 
-- **Collapse it.** Above 8 items the `Anytime` section renders as a header row with a count and a disclosure. Expanded state is `@AppStorage`, not SwiftData.
+- **Say how many.** The `Anytime` header carries a count. It used to collapse above 8 rows; the disclosure was in the way long before the section was long enough to justify it, and search is what actually finds one of a hundred cafés.
 - **Search it.** The All tab has a search row at the top of the list over title, venue, tags, address and notes (`Spot.matches`). Not `.searchable`: with Add sitting in the tab bar's search/prominent slot, the system search field never appears on this tab in any placement. A search ignores the Hide Ended / Hide Visited toggles and keeps Anytime expanded — a hit behind a disclosure is no hit.
 - **Sort by distance when that's possible.** This is what makes the imported places actually useful — "I'm here, what did I want to try nearby" is how that list gets read, and it is never read by date.
 
@@ -458,7 +458,7 @@ MonakaShare/                        share extension target (Phase 2)
 - [x] `OGMetadataFetcher` + autofill on URL entry (Fetch Info / PasteButton in `SpotFormView`)
 - [x] `ShareInputResolver` dispatch (§8.1) — also used by the in-app URL field
 - [x] `MapLinkResolver` — share a place from Google Maps (§8.2)
-- [x] `Anytime` collapsing (§7.3)
+- [x] `Anytime` count in the header (§7.3) — collapsing was removed 2026-09-23
 - [x] Distance sort + `LocationProvider` (§7.3) — applies within every section
 - [x] `SpotMapView` — pins tinted by countdown, selection card, unpinned-spots sheet, the same tag filter as All (`TagFilterMenu`); Show Visited / Show Ended live in its own gear, `MapSettingsView`
 - [x] Tag management — `SettingsView` + `TagsView` (rename / delete across spots), tag filter in the All tab
@@ -508,7 +508,7 @@ Update this section as you complete items.
 12. **Store the resolved URL, not the short link.** `maps.app.goo.gl` links are opaque and can stop resolving.
 13. **Never resolve links in a burst.** Bulk import caps concurrency at 3 and runs after the rows are already saved.
 14. **Ask for location only when distance sort is switched on** (§7.3). Not at launch, not during import. Everything works with location denied — the `Anytime` section just falls back to `addedAt`.
-15. **`Anytime` will dwarf every other section** once the Google Maps backlog is in. Keep it collapsed above 8 rows, or the exhibitions the app exists for get buried.
+15. **`Anytime` will dwarf every other section** once the Google Maps backlog is in. It sits below every dated section and carries a count in its header; finding one of them is search's job, not a disclosure's.
 
 ### Share extension
 
