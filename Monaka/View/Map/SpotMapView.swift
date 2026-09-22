@@ -29,6 +29,7 @@ struct SpotMapView: View {
     @State private var camera: MapCameraPosition = .automatic
     @State private var selectedSpotID: UUID?
     @State private var isShowingUnpinned = false
+    @State private var isShowingSettings = false
     @State private var today: Date = .now
     /// Read, never requested. `MapUserLocationButton` asks for permission
     /// when tapped, so it only exists once permission is already there.
@@ -82,9 +83,11 @@ struct SpotMapView: View {
             .navigationSubtitle(selectedTag.map { "Tagged \($0)" } ?? "")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Everything trailing, as on the All tab.
-                ToolbarItemGroup(placement: .primaryAction) {
-                    if !unpinned.isEmpty {
+                // Trailing is the same pair as the All tab — filter, then
+                // this tab's own settings. The unpinned count is a status,
+                // not a control over the map, so it sits on its own, leading.
+                if !unpinned.isEmpty {
+                    ToolbarItem(placement: .topBarLeading) {
                         Button {
                             isShowingUnpinned = true
                         } label: {
@@ -95,8 +98,13 @@ struct SpotMapView: View {
                         }
                         .accessibilityLabel("\(unpinned.count) spots not on the map")
                     }
+                }
+                ToolbarItemGroup(placement: .primaryAction) {
                     if !spots.tagsInUse.isEmpty {
                         TagFilterMenu(tags: spots.tagsInUse, selection: $selectedTag)
+                    }
+                    Button("Map Settings", systemImage: "gear") {
+                        isShowingSettings = true
                     }
                 }
             }
@@ -105,6 +113,9 @@ struct SpotMapView: View {
             }
             .sheet(isPresented: $isShowingUnpinned) {
                 UnpinnedSpotsView(spots: unpinned, date: today)
+            }
+            .sheet(isPresented: $isShowingSettings) {
+                MapSettingsView()
             }
         }
         .onChange(of: scenePhase) { _, phase in

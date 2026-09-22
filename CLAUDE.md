@@ -185,7 +185,7 @@ Use Xcode 27.0 at `/Applications/Xcode.app` (`export DEVELOPER_DIR=/Applications
 - **English UI.** Every user-facing string is English. Data fetched from a venue's page (venue names, exhibition titles in Japanese) stays as-is — that's source data.
 - **Dates: `yyyy/MM/dd`, `en_US_POSIX` locale, `Asia/Tokyo` timezone.** Always set **both** `locale` and `timeZone` on a `DateFormatter`. The TZ pin matters when the user is travelling.
 - **System colors only.** `.primary` / `.secondary` / `.tertiary` for text, `Color(.systemGroupedBackground)` / `Color(.secondarySystemGroupedBackground)` for surfaces, `Color.accentColor` for the yozora tint. Never hardcode `Color.white` / `Color.black` / `.preferredColorScheme(.dark)`.
-- **Three tabs.** `ContentView` is a `TabView`: **Today** (where to go today), **All** (the full §7.2 sectioned list), **Map**. Each tab owns its own `NavigationStack`. Settings is a gear in the nav bar opening a sheet (Madeleine / yomy style).
+- **Three tabs.** `ContentView` is a `TabView`: **Today** (where to go today), **All** (the full §7.2 sectioned list), **Map**. Each tab owns its own `NavigationStack`. Settings is a gear in the nav bar opening a sheet (Madeleine / yomy style) — **per tab**: the All tab's gear opens `SettingsView` (the list's options plus Tags, Reminders, Location), the Map tab's opens `MapSettingsView` (what the map pins). Trailing toolbar on both is `[tag filter][gear]`; the Map's unpinned count sits leading.
   - `Today` carries only `This Weekend` / `Ending Soon` / `Open Now`, led by one featured spot. `Upcoming`, `Anytime`, `Visited` and `Ended` live in `All`.
   - The featured spot is **also** listed in the section below it. The card is a highlight, not a removal.
   - **Add lives in the tab bar's detached capsule at the right end** — `role: .prominent` on iOS 27, falling back to `role: .search` on 26. `.search` was the only trailing-separated slot on iOS 26 and Add borrowed it; iOS 27 gave the separation its own role and draws a borrowed `.search` inline with the other tabs, so the role is picked behind an `#available`. It is not a real tab either way: selecting it bounces the selection back and presents the Add sheet. No FAB.
@@ -414,6 +414,7 @@ Monaka/
     │   └── CalendarView.swift      month grid with run bars (Phase 4)
     └── Settings/
         ├── SettingsView.swift          sheet off the gear in the All tab, + SettingsRoute
+        ├── MapSettingsView.swift       sheet off the gear in the Map tab
         ├── TagsView.swift              the vocabulary: counts, rename, delete
         ├── TagEditView.swift           name a tag and pick its icon
         ├── IconPickerView.swift        SF Symbol grid, ported from yomy
@@ -459,7 +460,7 @@ MonakaShare/                        share extension target (Phase 2)
 - [x] `MapLinkResolver` — share a place from Google Maps (§8.2)
 - [x] `Anytime` collapsing (§7.3)
 - [x] Distance sort + `LocationProvider` (§7.3) — applies within every section
-- [x] `SpotMapView` — pins tinted by countdown, selection card, unpinned-spots sheet, the same tag filter as All (`TagFilterMenu`); Show Visited / Show Ended live in Settings → Map
+- [x] `SpotMapView` — pins tinted by countdown, selection card, unpinned-spots sheet, the same tag filter as All (`TagFilterMenu`); Show Visited / Show Ended live in its own gear, `MapSettingsView`
 - [x] Tag management — `SettingsView` + `TagsView` (rename / delete across spots), tag filter in the All tab
 - [x] Hide Ended / Hide Visited from Settings (§7.2)
 
