@@ -16,6 +16,10 @@ struct SpotFormView: View {
     /// Adding pins the spot; editing must not insist on it, or a spot that
     /// arrived through the share sheet could never be corrected (§8.1).
     var requiresLocation = false
+    /// True while a page is being read — OGP and then the model. The owner
+    /// disables Save on it: saving halfway through means saving a title
+    /// the next second would have replaced.
+    var isBusy: Binding<Bool> = .constant(false)
 
     /// Every tag already in use, for the suggestion row.
     @Query private var spots: [Spot]
@@ -143,8 +147,9 @@ struct SpotFormView: View {
         else { return }
 
         isFetchingMetadata = true
+        isBusy.wrappedValue = true
         lastFetchedURL = draft.urlString
-        defer { isFetchingMetadata = false }
+        defer { isFetchingMetadata = false; isBusy.wrappedValue = false }
 
         // Through the dispatcher, so a pasted Google Maps link fills the
         // coordinates instead of being fetched as a web page (§8.1).
@@ -172,7 +177,8 @@ struct SpotFormView: View {
     private func adoptCaption(_ caption: String) async {
         guard SpotExtractor.isAvailable else { return }
         isFetchingMetadata = true
-        defer { isFetchingMetadata = false }
+        isBusy.wrappedValue = true
+        defer { isFetchingMetadata = false; isBusy.wrappedValue = false }
         if let extraction = await SpotExtractor().extract(fromText: caption) {
             draft.adopt(extraction, caption: caption)
         }
