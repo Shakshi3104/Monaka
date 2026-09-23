@@ -28,6 +28,7 @@ struct SpotFormView: View {
     @State private var tagInput = ""
     @State private var isNamingTag = false
     @State private var isFetchingMetadata = false
+    @State private var isPickingLocation = false
 
     @FocusState private var isURLFocused: Bool
     /// The URL the last fetch ran against, so tapping into the field and back
@@ -47,7 +48,7 @@ struct SpotFormView: View {
             // you from typing.
             linkSection
 
-            SpotLocationSection(draft: $draft, isRequired: requiresLocation)
+            SpotLocationSection(draft: $draft, isRequired: requiresLocation, isPicking: $isPickingLocation)
             runSection
             tagSection
 
@@ -58,6 +59,7 @@ struct SpotFormView: View {
         }
         // Dates are entered and read as Asia/Tokyo wall-clock days (§6.1).
         .environment(\.timeZone, Calendar.monaka.timeZone)
+        .locationPicker(draft: $draft, isPresented: $isPickingLocation)
     }
 
     // MARK: - Link + OGP autofill
