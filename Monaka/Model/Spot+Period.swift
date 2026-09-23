@@ -201,7 +201,10 @@ extension Spot {
             case .visited: .done
             case .endsToday: .soon
             case let .daysLeft(days): days <= Spot.endingSoonWindow ? .soon : .normal
-            case .startsToday, .startsIn: .normal
+            // Not open yet: nothing to act on, so it doesn't compete with a
+            // run you could go to today. The map keeps its pins tinted —
+            // a grey pin reads as missing rather than early.
+            case .startsToday, .startsIn: .muted
             case .ended, .none: .muted
             }
         }
