@@ -10,12 +10,15 @@ import SwiftUI
 import MapKit
 
 struct LocationPickerView: View {
-    @Environment(\.dismiss) private var dismiss
-
     /// Seeded from whatever the form already knows — usually the venue.
     let initialQuery: String
     let current: PickedLocation?
     let onPick: (PickedLocation) -> Void
+    /// Closing is the presenter's job, not `@Environment(\.dismiss)`'s. In
+    /// the share extension the form is hosted as a *child* view controller,
+    /// so a dismiss from inside this sheet walks up and tears down the share
+    /// sheet itself — the extension closes and nothing is saved.
+    var onClose: () -> Void = {}
 
     @State private var query = ""
     @State private var results: [MKMapItem] = []
@@ -39,12 +42,12 @@ struct LocationPickerView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", systemImage: "xmark") { dismiss() }
+                    Button("Cancel", systemImage: "xmark") { onClose() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done", systemImage: "checkmark") {
                         if let picked { onPick(picked) }
-                        dismiss()
+                        onClose()
                     }
                     .disabled(picked == nil)
                 }
