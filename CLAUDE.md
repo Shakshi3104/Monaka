@@ -50,7 +50,7 @@ No SPM dependencies. Everything the app needs is in the standard library + Swift
 - **A café saved in Google Maps is a spot with no run.** That's the entire difference. It's why §7.1 treats a missing run as a first-class case rather than incomplete data, and why the `Anytime` section exists.
 - **The run is two Optionals** (`startDate`, `endDate`), not a required range. See §7 for how the four combinations are interpreted.
 - **Coordinates are stored; nothing else about the place is.** `latitude` / `longitude` / `address` / `mapURL`. No Google API key, no Place ID, no cached tiles, no geocoding at import time.
-- **Tags are a plain `[String]`** on `Spot`, not a relationship and not a single category — an exhibition can be `Exhibition` + `Ends soon` + `Ueno` at once. Unlike `Feed.category` in yomy, there is no tag entity: the Add form suggests tags already in use so the vocabulary converges without a tag table, and `TagsView` rewrites every spot when one is renamed.
+- **Tags are a plain `[String]`** on `Spot`, not a relationship and not a single category — an exhibition can be `Exhibition` + `Ends soon` + `Ueno` at once. Unlike `Feed.category` in yomy, there is no tag entity: the spot form lays every known tag out as a chip you tap on and off (wrapped by `FlowLayout`, with a New Tag chip at the end) so the vocabulary converges without a tag table, and `TagsView` rewrites every spot when one is renamed.
 - **A tag's name and icon live in `TagVocabulary`** (`@AppStorage`, JSON), not SwiftData. Without a tag entity there is nowhere else for a zero-spot tag or an SF Symbol to exist, and setting a vocabulary up in advance is worth having. It stays strictly vocabulary: `Spot.tags` remains the only answer to *which* spots carry a tag. A tag typed straight into a spot's form has no entry and falls back to `TagVocabulary.defaultIcon` until one is chosen in Settings.
 - **No sync.** Single-device only. The `@Model` still follows the CloudKit constraints in §9 so the option stays open.
 
@@ -396,6 +396,7 @@ Monaka/
 │   ├── LocationProvider.swift      CoreLocation, When In Use, requested lazily
 │   └── RunReminder.swift           local notification 3 days before a run ends, opt-in (Phase 3)
 └── View/
+    ├── FlowLayout.swift            wrapping chip layout — SwiftUI has none
     ├── TagFilterMenu.swift         the tag filter menu All and Map share
     ├── ClearableTextField.swift    TextField + ⓧ, both forms (duplicated in MonakaShare/)
     ├── Today/
