@@ -18,7 +18,7 @@ struct ShareFormView: View {
     @State private var draft = SpotDraft()
     @State private var isResolving = true
     @State private var isExtracting = false
-    @State private var isPickingLocation = false
+    @State private var isPinning = false
     @State private var saveFailed = false
 
     private var isSaveable: Bool {
@@ -46,10 +46,7 @@ struct ShareFormView: View {
                 }
 
                 sourceSection
-                // The model fills the venue and often the address, so the
-                // search lands on the right building in one tap — which is
-                // what a share can afford and couldn't before.
-                SpotLocationSection(draft: $draft, isPicking: $isPickingLocation)
+                locationSection
                 runSection
 
                 Section {
@@ -60,7 +57,6 @@ struct ShareFormView: View {
                 }
             }
             .environment(\.timeZone, Calendar.monaka.timeZone)
-            .locationPicker(draft: $draft, isPresented: $isPickingLocation)
             .navigationTitle("Save to Monaka")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -71,7 +67,7 @@ struct ShareFormView: View {
                     // Saving mid-read would keep a title the next second
                     // replaces, so Save waits for the model too.
                     Button("Save", systemImage: "checkmark") { save() }
-                        .disabled(!isSaveable || isResolving || isExtracting)
+                        .disabled(!isSaveable || isResolving || isExtracting || isPinning)
                 }
             }
             .alert("Couldn't Save", isPresented: $saveFailed) {
@@ -85,38 +81,98 @@ struct ShareFormView: View {
                 draft.fillEmptyFields(from: resolved)
                 isResolving = false
 
-                // The on-device model reads the body for the venue and the
-                // run. Save waits for it: a few seconds, and what it writes
-                // is what you'd otherwise type.
-                guard SpotExtractor.isAvailable else { return }
-                isExtracting = true
-                defer { isExtracting = false }
-                switch input {
-                case let .text(text) where ShareInputResolver.firstURL(in: text) == nil:
-                    // A caption. The resolver made the whole thing the title;
-                    // the model finds the name in it.
-                    if let extraction = await SpotExtractor().extract(fromText: text) {
-                        draft.adopt(extraction, caption: text)
-                    }
-                case let .text(text):
-                    // "name https://…" — the URL is the page to read.
-                    guard let url = ShareInputResolver.firstURL(in: text), !MapLinkResolver.isMapLink(url) else { return }
-                    if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
-                        draft.fillEmptyFields(from: extraction)
-                    }
-                case let .url(url):
-                    guard !MapLinkResolver.isMapLink(url) else { return }
-                    if ShareInputResolver.isSocialPost(url) {
-                        // An Instagram post: the caption is in Notes now, and
-                        // the og:title (“user on Instagram: …”) is no title.
-                        guard let caption = resolved.notes.nilIfBlank,
-                              let extraction = await SpotExtractor().extract(fromText: caption)
-                        else { return }
-                        draft.adopt(extraction, caption: caption)
-                    } else if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
-                        draft.fillEmptyFields(from: extraction)
-                    }
+                await readWithModel(input: input, resolved: resolved)
+                await pinAutomatically()
+            }
+        }
+    }
+
+    // MARK: - Filling it in
+
+    /// The on-device model reads the body for the venue and the run. Save
+    /// waits for it: a few seconds, and what it writes is what you'd
+    /// otherwise type.
+    private func readWithModel(input: ShareInputResolver.Input, resolved: SpotDraft) async {
+        guard SpotExtractor.isAvailable else { return }
+        isExtracting = true
+        defer { isExtracting = false }
+
+        switch input {
+        case let .text(text) where ShareInputResolver.firstURL(in: text) == nil:
+            // A caption. The resolver made the whole thing the title; the
+            // model finds the name in it.
+            if let extraction = await SpotExtractor().extract(fromText: text, isCaption: true) {
+                draft.adopt(extraction, caption: text)
+            }
+        case let .text(text):
+            // "name https://…" — the URL is the page to read.
+            guard let url = ShareInputResolver.firstURL(in: text), !MapLinkResolver.isMapLink(url) else { return }
+            if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
+                draft.fillEmptyFields(from: extraction)
+            }
+        case let .url(url):
+            guard !MapLinkResolver.isMapLink(url) else { return }
+            if ShareInputResolver.isSocialPost(url) {
+                // An Instagram post: the caption is in Notes now, and the
+                // og:title (“user on Instagram: …”) is no title.
+                if let caption = resolved.notes.nilIfBlank,
+                   let extraction = await SpotExtractor().extract(fromText: caption, isCaption: true) {
+                    draft.adopt(extraction, caption: caption)
                 }
+            } else if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
+                draft.fillEmptyFields(from: extraction)
+            }
+        }
+    }
+
+    /// Pins whatever `MKLocalSearch` returns first for the place's name. The
+    /// share sheet has no picker — the one it had dismissed the extension
+    /// itself — so it guesses out loud instead: the form shows what it found
+    /// and says it can be corrected in Monaka. A share that isn't pinned at
+    /// all never reaches the Map tab, which is worse than a pin one tap from
+    /// being right.
+    private func pinAutomatically() async {
+        guard draft.location == nil else { return }
+        isPinning = true
+        defer { isPinning = false }
+        draft.location = await PickedLocation.firstMatch(
+            forAnyOf: [draft.suggestedAddress, draft.venue.nilIfBlank, draft.title.nilIfBlank]
+        )
+    }
+
+    // MARK: - Location
+
+    @ViewBuilder
+    private var locationSection: some View {
+        Section {
+            if let location = draft.location {
+                SpotMapSnapshot(
+                    coordinate: location.coordinate,
+                    title: location.name,
+                    cornerRadius: 0
+                )
+                .frame(height: 130)
+                .listRowInsets(EdgeInsets())
+            } else if isPinning {
+                HStack(spacing: 6) {
+                    ProgressView()
+                    Text("Looking the place up…")
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Label("Not pinned", systemImage: "mappin.slash")
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Location")
+        } footer: {
+            if let location = draft.location {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(location.address ?? location.name)
+                    Text("Found from the name. Open the spot in Monaka to move the pin.")
+                }
+            } else if !isPinning {
+                Text("Nothing matched the name, so it won't show up on the Map tab. Pin it in Monaka.")
             }
         }
     }

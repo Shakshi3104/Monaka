@@ -288,15 +288,15 @@ The share extension and the in-app URL field both hand their input to `ShareInpu
 | any other URL | `OGMetadataFetcher` | `title`, `imageURL`, `venue` (`og:site_name`), `urlString` |
 | plain text | `SpotExtractor` (a caption) | `title` (the place's name), `venue`, `notes` (the caption), `suggestedAddress`; a run only for an exhibition / event / pop-up |
 
-After the OGP step, any web page also goes through `SpotExtractor` for what OGP can't give: a venue named in the body, the run, and a summary for `notes` — one or two sentences on why you'd go, in the page's own language, replacing a pasted caption and filling the empty Notes of an ordinary page. It fills **only empty fields**, and a run it proposes sets `SpotDraft.isRunSuggested` so the form says "Read from the page — check it against the site" until a date is touched. A caption reaches the model stripped of hashtags and of Instagram's `date、user: "…"` byline — 30 hashtags naming every neighbourhood in Tokyo made it answer that the text was about all of them, i.e. nothing. The model is asked whether the page is about *one* thing and what kind (`shop` never gets dates, and a shop is its own venue — `venue = title`, as a Google Maps place arrives), and is grounded on the OGP title; Save is disabled in every form while the page is being read; listing pages and homepages can still yield their first item, which is why the run is a flagged suggestion and never a silent write.
+After the OGP step, any web page also goes through `SpotExtractor` for what OGP can't give: a venue named in the body, the run, and a summary for `notes` — one or two sentences on why you'd go, in the page's own language, replacing a pasted caption and filling the empty Notes of an ordinary page. It fills **only empty fields**, and a run it proposes sets `SpotDraft.isRunSuggested` so the form says "Read from the page — check it against the site" until a date is touched. The "is this about one thing" gate applies to a **page** only. A shared post is one a person picked, and the model answered `false` for a café post it had already filled in correctly — name, address and all — so the caption paths pass `isCaption: true` and keep the fields. A caption reaches the model stripped of hashtags and of Instagram's `date、user: "…"` byline — 30 hashtags naming every neighbourhood in Tokyo made it answer that the text was about all of them, i.e. nothing. The model is asked whether the page is about *one* thing and what kind (`shop` never gets dates, and a shop is its own venue — `venue = title`, as a Google Maps place arrives), and is grounded on the OGP title; Save is disabled in every form while the page is being read; listing pages and homepages can still yield their first item, which is why the run is a flagged suggestion and never a silent write.
 
 A resolver that fails fills nothing and is not an error (§13). The form opens either way.
 
 **Every spot gets a location at add time — in the app.** The dispatcher only produces coordinates for map links, so the Add form carries a location picker (`LocationPickerView`, `MKLocalSearch`) and it is part of the normal add flow, not an afterthought — an exhibition shared from a museum's own page would otherwise never reach the Map tab. Seed the search field with whatever `venue` the OGP fetch produced. User-initiated only: this is not the bulk geocoding §3 rules out.
 
-**The share extension has the same picker.** It used to be the exception — a share should be two taps, and searching for a building by hand is not two taps. `SpotExtractor` changed that: the venue, and often the street address, are already in the draft by the time the form appears, so the search lands on the right place in one tap. It stays optional there — only a title is required, and a spot saved without a pin gets one later in the app. `SpotLocationSection` is the one implementation both forms use.
+**The share extension pins the spot itself, and has no picker.** It tried one and couldn't keep it: a sheet presented from the extension's child-hosted form tore down the share sheet instead of itself. So the extension guesses out loud — `PickedLocation.firstMatch(forAnyOf:)` takes the address the model found, falling back to the venue and then the title, and the form shows the pin it landed on and says to fix it in Monaka. Wrong sometimes; better than a shared spot that never reaches the Map tab. Address first: a shop's full name (`Pâtisserie TEN & 日比谷okuroji店`) often matches nothing, while its address lands on the building. A name search is kept only when the result's name and the query contain one another once folded — MKLocalSearch answers nonsense queries with real places otherwise.
 
-**Nothing in the extension may call `@Environment(\\.dismiss)`.** `ShareViewController` hosts the form as a *child* view controller, so a dismiss from inside it walks up and tears down the share sheet itself — the extension closes and nothing is saved. `ShareFormView` closes through `onFinish` / `onCancel`, and `LocationPickerView` through its `onClose` closure.
+**Nothing in the extension may present a sheet or call `@Environment(\\.dismiss)`.** `ShareViewController` hosts the form as a *child* view controller with no presentation of its own, so both reach up and tear down the share sheet itself — the extension closes and nothing is saved. `ShareFormView` closes through `onFinish` / `onCancel`.
 
 ### 8.2 Google Maps links
 
@@ -365,7 +365,7 @@ Two things still need Xcode's GUI and must be handed back to the user:
 
 Also: a synchronized folder can only belong to one target. These ten files are therefore **duplicated verbatim** into `MonakaShare/`:
 
-`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`, `SpotExtractor.swift`, `ClearableTextField.swift`, `SpotLocationSection.swift`, `LocationPickerView.swift`
+`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`, `SpotExtractor.swift`, `ClearableTextField.swift`, `SpotMapSnapshot.swift`, `PlaceSearch.swift`
 
 **Edit both copies together**, and keep them byte-identical — `diff` them after touching any of them. Only files with no app-only dependency belong on this list; anything that interprets a spot (`Spot+Period.swift`) stays app-only.
 
@@ -397,8 +397,10 @@ Monaka/
 │   ├── SpotExtractor.swift         Foundation Models: title / venue / address / run from text (duplicated in MonakaShare/)
 │   ├── SavedPlacesImporter.swift   Google Takeout CSV → [SpotDraft]
 │   ├── LocationProvider.swift      CoreLocation, When In Use, requested lazily
+│   ├── PlaceSearch.swift           name/address → coordinate, + MapKit bridging (duplicated in MonakaShare/)
 │   └── RunReminder.swift           local notification 3 days before a run ends, opt-in (Phase 3)
 └── View/
+    ├── SpotMapSnapshot.swift       one pin, no interaction (duplicated in MonakaShare/)
     ├── FlowLayout.swift            wrapping chip layout — SwiftUI has none
     ├── TagFilterMenu.swift         the tag filter menu All and Map share
     ├── ClearableTextField.swift    TextField + ⓧ, both forms (duplicated in MonakaShare/)
@@ -408,10 +410,10 @@ Monaka/
     │   ├── SpotListView.swift      the full sectioned list (All tab)
     │   ├── SpotDetailView.swift    header image, run pills, notes, link, Visited button
     │   ├── SpotFormView.swift      the form Add and Edit share, + TagChip
-    │   ├── SpotLocationSection.swift the Location row both forms show, + SpotMapSnapshot (duplicated in MonakaShare/)
+    │   ├── SpotLocationSection.swift the Location row the app's forms show (app-only)
     │   ├── AddSpotView.swift       form + PasteButton + OGP autofill + location picker
     │   ├── EditSpotView.swift
-    │   ├── LocationPickerView.swift  MKLocalSearch + pin, §8.1 (duplicated in MonakaShare/)
+    │   ├── LocationPickerView.swift  MKLocalSearch + pin, §8.1 (app-only)
     │   └── SpotRowView.swift       row + spotSwipeActions
     ├── Map/
     │   └── SpotMapView.swift       all spots with coordinates, pins tinted by countdown
