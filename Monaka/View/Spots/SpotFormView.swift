@@ -26,6 +26,7 @@ struct SpotFormView: View {
     @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
 
     @State private var tagInput = ""
+    @State private var isNamingTag = false
     @State private var isPickingLocation = false
     @State private var isFetchingMetadata = false
 
@@ -286,62 +287,57 @@ struct SpotFormView: View {
 
     /// Tags already in use elsewhere plus the ones named in Settings but not
     /// yet put on anything, minus the ones already on this draft.
-    private var suggestions: [String] {
-        let used = Set(draft.tags)
+    /// Every tag there is: the vocabulary in the order Settings shows it,
+    /// then names only in use on other spots, then anything typed straight
+    /// into this form. Selected or not, they all stay on screen — a tag you
+    /// can't see is a tag you retype.
+    private var allTags: [String] {
         var seen = Set<String>()
-        return (spots.flatMap(\.tags) + TagVocabulary.decode(vocabularyRaw).map(\.name))
-            .filter { seen.insert($0).inserted && !used.contains($0) }
+        return (TagVocabulary.decode(vocabularyRaw).map(\.name) + spots.flatMap(\.tags) + draft.tags)
+            .filter { seen.insert($0).inserted }
     }
 
     private var tagSection: some View {
         Section {
-            if !draft.tags.isEmpty {
-                chipRow {
-                    ForEach(draft.tags, id: \.self) { tag in
-                        Button {
-                            draft.tags.removeAll { $0 == tag }
-                        } label: {
-                            TagChip(tag, systemImage: "xmark")
-                        }
-                        .buttonStyle(.plain)
+            FlowLayout {
+                ForEach(allTags, id: \.self) { tag in
+                    Button {
+                        toggleTag(tag)
+                    } label: {
+                        TagChip(tag, isSelected: draft.tags.contains(tag))
                     }
+                    .buttonStyle(.plain)
                 }
-            }
 
-            TextField("Add a tag", text: $tagInput)
-                .autocorrectionDisabled()
-                .submitLabel(.done)
-                .onSubmit { addTag(tagInput) }
-
-            if !suggestions.isEmpty {
-                chipRow {
-                    ForEach(suggestions, id: \.self) { tag in
-                        Button {
-                            addTag(tag)
-                        } label: {
-                            Label(tag, systemImage: TagVocabulary.icon(for: tag, in: vocabularyRaw))
-                        }
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.capsule)
-                        .font(.caption)
-                    }
+                Button {
+                    isNamingTag = true
+                } label: {
+                    TagChip("New Tag", icon: "plus", isSelected: false)
                 }
+                .buttonStyle(.plain)
             }
+            .padding(.vertical, 2)
         } header: {
             Text("Tags")
         } footer: {
-            Text("Tags are plain labels — renaming one later doesn't update spots already saved.")
+            Text("Tap to put a tag on this spot. Tags are plain labels — renaming one later doesn't update spots already saved.")
+        }
+        .alert("New Tag", isPresented: $isNamingTag) {
+            TextField("Tag", text: $tagInput)
+                .autocorrectionDisabled()
+            Button("Add") { addTag(tagInput) }
+            Button("Cancel", role: .cancel) { tagInput = "" }
+        } message: {
+            Text("Give it an icon later in Settings → Tags.")
         }
     }
 
-    private func chipRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 6) {
-                content()
-            }
-            .padding(.vertical, 2)
+    private func toggleTag(_ tag: String) {
+        if let index = draft.tags.firstIndex(of: tag) {
+            draft.tags.remove(at: index)
+        } else {
+            draft.tags.append(tag)
         }
-        .scrollIndicators(.hidden)
     }
 
     private func addTag(_ tag: String) {
@@ -456,29 +452,36 @@ struct TagChip: View {
     @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
 
     let tag: String
-    /// A trailing glyph for what the chip *does* — the `xmark` on a removable
-    /// one. Separate from the tag's own icon, which always leads.
-    var systemImage: String?
+    /// Overrides the tag's own icon — the `plus` on the New Tag chip, which
+    /// names no tag yet.
+    var icon: String?
+    /// Filled when the tag is on the spot, outlined when it's one you could
+    /// add. A chip that reads the same either way is a chip you have to tap
+    /// to interrogate.
+    var isSelected = true
 
-    init(_ tag: String, systemImage: String? = nil) {
+    init(_ tag: String, icon: String? = nil, isSelected: Bool = true) {
         self.tag = tag
-        self.systemImage = systemImage
+        self.icon = icon
+        self.isSelected = isSelected
     }
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: TagVocabulary.icon(for: tag, in: vocabularyRaw))
+            Image(systemName: icon ?? TagVocabulary.icon(for: tag, in: vocabularyRaw))
                 .font(.caption2)
             Text(tag)
-            if let systemImage {
-                Image(systemName: systemImage)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
         }
         .font(.caption)
+        .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Color.accentColor.opacity(0.15), in: .capsule)
+        .background {
+            if isSelected {
+                Capsule().fill(Color.accentColor.opacity(0.15))
+            } else {
+                Capsule().strokeBorder(Color.secondary.opacity(0.35))
+            }
+        }
     }
 }
