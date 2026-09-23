@@ -18,6 +18,7 @@ struct ShareFormView: View {
     @State private var draft = SpotDraft()
     @State private var isResolving = true
     @State private var isExtracting = false
+    @State private var isPickingLocation = false
     @State private var saveFailed = false
 
     private var isSaveable: Bool {
@@ -48,7 +49,7 @@ struct ShareFormView: View {
                 // The model fills the venue and often the address, so the
                 // search lands on the right building in one tap — which is
                 // what a share can afford and couldn't before.
-                SpotLocationSection(draft: $draft)
+                SpotLocationSection(draft: $draft, isPicking: $isPickingLocation)
                 runSection
 
                 Section {
@@ -59,6 +60,7 @@ struct ShareFormView: View {
                 }
             }
             .environment(\.timeZone, Calendar.monaka.timeZone)
+            .locationPicker(draft: $draft, isPresented: $isPickingLocation)
             .navigationTitle("Save to Monaka")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -16,8 +16,11 @@ struct SpotLocationSection: View {
     @Binding var draft: SpotDraft
     /// Adding in the app pins the spot; a share may be saved without one.
     var isRequired = false
-
-    @State private var isPickingLocation = false
+    /// Owned by the form, not by this section: a `.sheet` attached inside a
+    /// `Form` is torn down and rebuilt whenever the form redraws, which
+    /// dismissed the picker the instant it appeared. The section only asks;
+    /// `.locationPicker(…)` at the form's root presents.
+    @Binding var isPicking: Bool
 
     var body: some View {
         Section {
@@ -26,7 +29,7 @@ struct SpotLocationSection: View {
                 // Edit that name is rebuilt from `venue` — so a row above it
                 // repeated the Venue field two rows up, word for word.
                 Button {
-                    isPickingLocation = true
+                    isPicking = true
                 } label: {
                     SpotMapSnapshot(
                         coordinate: location.coordinate,
@@ -39,7 +42,7 @@ struct SpotLocationSection: View {
                 .listRowInsets(EdgeInsets())
             } else {
                 Button {
-                    isPickingLocation = true
+                    isPicking = true
                 } label: {
                     Label("Choose on Map", systemImage: "mappin.and.ellipse")
                 }
@@ -63,15 +66,24 @@ struct SpotLocationSection: View {
                      : "Not pinned yet, so it won't show up on the Map tab.")
             }
         }
-        .sheet(isPresented: $isPickingLocation) {
+    }
+}
+
+extension View {
+    /// The picker sheet, attached at the form's root where its presentation
+    /// survives a redraw.
+    func locationPicker(draft: Binding<SpotDraft>, isPresented: Binding<Bool>) -> some View {
+        sheet(isPresented: isPresented) {
             LocationPickerView(
                 // An address the text spelled out beats a venue name for
                 // finding the exact building.
-                initialQuery: draft.location?.name ?? draft.suggestedAddress ?? draft.venue,
-                current: draft.location
+                initialQuery: draft.wrappedValue.location?.name
+                    ?? draft.wrappedValue.suggestedAddress
+                    ?? draft.wrappedValue.venue,
+                current: draft.wrappedValue.location
             ) { location in
-                draft.location = location
-                if draft.venue.isEmpty { draft.venue = location.name }
+                draft.wrappedValue.location = location
+                if draft.wrappedValue.venue.isEmpty { draft.wrappedValue.venue = location.name }
             }
         }
     }
