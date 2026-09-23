@@ -94,7 +94,7 @@ struct TagEditView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { save() }
+                Button("Done", systemImage: "checkmark") { save() }
                     .disabled(!isSaveable)
             }
         }

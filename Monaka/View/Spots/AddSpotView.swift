@@ -33,12 +33,12 @@ struct AddSpotView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
+                        Button("Cancel", systemImage: "xmark") {
                             if hasChanges { isConfirmingDiscard = true } else { dismiss() }
                         }
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") { save() }
+                        Button("Save", systemImage: "checkmark") { save() }
                             .disabled(!form.isAddable || isFormBusy)
                     }
                 }
