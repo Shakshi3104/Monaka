@@ -155,7 +155,7 @@ struct SpotFormView: View {
             // The caption is the page. The og:title (“user on Instagram: …”)
             // is no title, so this path replaces it.
             guard let caption = resolved.notes.nilIfBlank,
-                  let extraction = await SpotExtractor().extract(fromText: caption)
+                  let extraction = await SpotExtractor().extract(fromText: caption, isCaption: true)
             else { return }
             draft.adopt(extraction, caption: caption)
         } else if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
@@ -170,7 +170,7 @@ struct SpotFormView: View {
         isFetchingMetadata = true
         isBusy.wrappedValue = true
         defer { isFetchingMetadata = false; isBusy.wrappedValue = false }
-        if let extraction = await SpotExtractor().extract(fromText: caption) {
+        if let extraction = await SpotExtractor().extract(fromText: caption, isCaption: true) {
             draft.adopt(extraction, caption: caption)
         }
     }

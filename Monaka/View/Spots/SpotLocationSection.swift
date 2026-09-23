@@ -2,11 +2,9 @@
 //  SpotLocationSection.swift
 //  Monaka
 //
-//  The Location row both forms show: a map once the spot is pinned, "Choose
-//  on Map" until then, and the picker sheet behind either. One implementation
-//  so the share sheet and the app agree on what pinning looks like.
-//
-//  DUPLICATED VERBATIM into MonakaShare/ (§10).
+//  The Location row the app's forms show: a map once the spot is pinned,
+//  "Choose on Map" until then, and the picker sheet behind either. App-only —
+//  the share sheet pins automatically instead (§8.1).
 //
 
 import SwiftUI
@@ -88,33 +86,5 @@ extension View {
                 onClose: { isPresented.wrappedValue = false }
             )
         }
-    }
-}
-
-/// A non-interactive map showing one pin.
-///
-/// `cornerRadius: 0` lets it sit full-bleed in a grouped list row, where the
-/// section already does the clipping.
-struct SpotMapSnapshot: View {
-    let coordinate: CLLocationCoordinate2D
-    let title: String
-    var meters: CLLocationDistance = 500
-    var cornerRadius: CGFloat = 10
-
-    var body: some View {
-        Map(
-            initialPosition: .region(
-                MKCoordinateRegion(
-                    center: coordinate,
-                    latitudinalMeters: meters,
-                    longitudinalMeters: meters
-                )
-            )
-        ) {
-            Marker(title, coordinate: coordinate)
-                .tint(Color.accentColor)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-        .allowsHitTesting(false)
     }
 }

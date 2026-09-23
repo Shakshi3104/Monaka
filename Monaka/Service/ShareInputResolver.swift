@@ -98,8 +98,12 @@ struct ShareInputResolver: Sendable {
                 break
             }
         }
-        let firstLine = text.split(whereSeparator: \.isNewline).first.map(String.init) ?? text
-        return Self.strippedOrnaments(firstLine)
+        // Captions open with a line of "." or "・" to force a line break in
+        // Instagram's layout — taking the first line literally made a spot
+        // called ".".
+        let lines = text.split(whereSeparator: \.isNewline).map(String.init)
+        let firstReal = lines.first { Self.strippedOrnaments($0).count > 1 }
+        return Self.strippedOrnaments(firstReal ?? lines.first ?? text)
     }
 
     /// Instagram's `og:description` is the caption wrapped in a byline —
@@ -120,7 +124,7 @@ struct ShareInputResolver: Sendable {
     /// Brackets are left alone: 【銀座】 opens a caption and closes again, and
     /// stripping the opener leaves the stray 】 behind.
     private static func strippedOrnaments(_ text: String) -> String {
-        let quotes = CharacterSet(charactersIn: "\"“”·•- ")
+        let quotes = CharacterSet(charactersIn: "\"“”·•-.。・…　 ")
         var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         while let first = trimmed.unicodeScalars.first,
               first.properties.isEmojiPresentation || quotes.contains(first) {

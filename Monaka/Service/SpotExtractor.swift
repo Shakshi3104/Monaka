@@ -96,7 +96,12 @@ struct SpotExtractor: Sendable {
         return await extract(fromText: text, subject: subject, today: today)
     }
 
-    func extract(fromText text: String, subject: String? = nil, today: Date = .now) async -> Extraction? {
+    /// `isCaption` says a person chose to share *this post*, which settles
+    /// the question the model is bad at: whether the text is about one place.
+    /// It answered `false` for a café post that it had already filled in
+    /// correctly — name, address and all — and the gate threw the lot away.
+    /// A web page keeps the gate: that one really might be a listing.
+    func extract(fromText text: String, subject: String? = nil, isCaption: Bool = false, today: Date = .now) async -> Extraction? {
         // A caption's last third is hashtags naming every neighbourhood in
         // Tokyo. Left in, the model reads the text as being about all of
         // them and answers nothing at all.
@@ -124,7 +129,7 @@ struct SpotExtractor: Sendable {
                     generating: Answer.self,
                     options: options
                 ).content
-                let extraction = Self.validate(answer, today: today)
+                let extraction = Self.validate(answer, today: today, isCaption: isCaption)
                 return extraction.isEmpty ? nil : extraction
             } catch {
                 guard attempt == 0 else { return nil }
@@ -162,11 +167,12 @@ struct SpotExtractor: Sendable {
     /// Dates are strings until they survive this. Both are parsed as
     /// Asia/Tokyo calendar days (§6.1), anything outside a sensible window
     /// around today is dropped, and a reversed pair keeps only the start.
-    private static func validate(_ answer: Answer, today: Date) -> Extraction {
+    private static func validate(_ answer: Answer, today: Date, isCaption: Bool) -> Extraction {
         var extraction = Extraction()
         // A homepage or a listing yields whatever the model noticed first —
-        // "オンライン限定", a one-day news item. Nothing from those.
-        guard answer.isAboutOneThing else { return extraction }
+        // "オンライン限定", a one-day news item. Nothing from those. A shared
+        // post is not that: someone picked it.
+        guard answer.isAboutOneThing || isCaption else { return extraction }
         extraction.isShop = answer.kind == .shop
         extraction.title = answer.title?.cleaned
         extraction.venue = extraction.isShop ? extraction.title : answer.venue?.cleaned

@@ -178,30 +178,6 @@ struct LocationPickerView: View {
     }
 }
 
-// MARK: - MapKit bridging
-
-extension PickedLocation {
-    var coordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-    }
-
-    init(_ item: MKMapItem) {
-        self.init(
-            name: item.name ?? "",
-            address: item.formattedAddress,
-            latitude: item.coordinate.latitude,
-            longitude: item.coordinate.longitude
-        )
-    }
-}
-
-extension MKMapItem {
-    /// `placemark` is deprecated as of iOS 26 — `location` / `address` replace it.
-    var coordinate: CLLocationCoordinate2D { location.coordinate }
-
-    var formattedAddress: String? { address?.fullAddress }
-}
-
 #Preview {
     LocationPickerView(initialQuery: "東京都美術館", current: nil) { _ in }
 }
