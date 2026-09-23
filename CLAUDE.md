@@ -294,7 +294,7 @@ A resolver that fails fills nothing and is not an error (§13). The form opens e
 
 **Every spot gets a location at add time — in the app.** The dispatcher only produces coordinates for map links, so the Add form carries a location picker (`LocationPickerView`, `MKLocalSearch`) and it is part of the normal add flow, not an afterthought — an exhibition shared from a museum's own page would otherwise never reach the Map tab. Seed the search field with whatever `venue` the OGP fetch produced. User-initiated only: this is not the bulk geocoding §3 rules out.
 
-**The share extension is the exception.** A share should be two taps, so `ShareFormView` has no map picker and only requires a title; it says so in the form. A spot captured that way can arrive without coordinates and gets pinned later in the app.
+**The share extension has the same picker.** It used to be the exception — a share should be two taps, and searching for a building by hand is not two taps. `SpotExtractor` changed that: the venue, and often the street address, are already in the draft by the time the form appears, so the search lands on the right place in one tap. It stays optional there — only a title is required, and a spot saved without a pin gets one later in the app. `SpotLocationSection` is the one implementation both forms use.
 
 ### 8.2 Google Maps links
 
@@ -361,9 +361,9 @@ Two things still need Xcode's GUI and must be handed back to the user:
 - New **targets** (the share extension, the widget extension)
 - **Capabilities** (App Groups) and asset catalog entries created through the asset editor
 
-Also: a synchronized folder can only belong to one target. These eight files are therefore **duplicated verbatim** into `MonakaShare/`:
+Also: a synchronized folder can only belong to one target. These ten files are therefore **duplicated verbatim** into `MonakaShare/`:
 
-`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`, `SpotExtractor.swift`, `ClearableTextField.swift`
+`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`, `SpotExtractor.swift`, `ClearableTextField.swift`, `SpotLocationSection.swift`, `LocationPickerView.swift`
 
 **Edit both copies together**, and keep them byte-identical — `diff` them after touching any of them. Only files with no app-only dependency belong on this list; anything that interprets a spot (`Spot+Period.swift`) stays app-only.
 
@@ -405,10 +405,11 @@ Monaka/
     ├── Spots/
     │   ├── SpotListView.swift      the full sectioned list (All tab)
     │   ├── SpotDetailView.swift    header image, run pills, notes, link, Visited button
-    │   ├── SpotFormView.swift      the form Add and Edit share, + TagChip / SpotMapSnapshot
+    │   ├── SpotFormView.swift      the form Add and Edit share, + TagChip
+    │   ├── SpotLocationSection.swift the Location row both forms show, + SpotMapSnapshot (duplicated in MonakaShare/)
     │   ├── AddSpotView.swift       form + PasteButton + OGP autofill + location picker
     │   ├── EditSpotView.swift
-    │   ├── LocationPickerView.swift  MKLocalSearch + pin, §8.1
+    │   ├── LocationPickerView.swift  MKLocalSearch + pin, §8.1 (duplicated in MonakaShare/)
     │   └── SpotRowView.swift       row + spotSwipeActions
     ├── Map/
     │   └── SpotMapView.swift       all spots with coordinates, pins tinted by countdown
