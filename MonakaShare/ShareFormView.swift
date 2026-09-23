@@ -66,12 +66,12 @@ struct ShareFormView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { onCancel() }
+                    Button("Cancel", systemImage: "xmark") { onCancel() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     // Saving mid-read would keep a title the next second
                     // replaces, so Save waits for the model too.
-                    Button("Save") { save() }
+                    Button("Save", systemImage: "checkmark") { save() }
                         .disabled(!isSaveable || isResolving || isExtracting)
                 }
             }

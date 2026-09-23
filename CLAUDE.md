@@ -189,6 +189,7 @@ Use Xcode 27.0 at `/Applications/Xcode.app` (`export DEVELOPER_DIR=/Applications
   - `Today` carries only `This Weekend` / `Ending Soon` / `Open Now`, led by one featured spot. `Upcoming`, `Anytime`, `Visited` and `Ended` live in `All`.
   - The featured spot is **also** listed in the section below it. The card is a highlight, not a removal.
   - **Add lives in the tab bar's detached capsule at the right end** — `role: .prominent` on iOS 27, falling back to `role: .search` on 26. `.search` was the only trailing-separated slot on iOS 26 and Add borrowed it; iOS 27 gave the separation its own role and draws a borrowed `.search` inline with the other tabs, so the role is picked behind an `#available`. It is not a real tab either way: selecting it bounces the selection back and presents the Add sheet. No FAB.
+- **Toolbar Cancel / Done / Save are glyphs, not words.** `Button("Cancel", systemImage: "xmark")`, `Button("Done", systemImage: "checkmark")` — a toolbar button with a `systemImage` renders icon-only on iOS and keeps its title as the accessibility label. Buttons *inside* an alert or a confirmation dialog stay text: there is no toolbar there to read them as icons, and the words are the choice.
 - **Destructive actions in the detail view confirm via `.alert`**, not `.confirmationDialog`. List swipe-to-delete is the deliberate exception and deletes immediately.
 
 ### 6.2 Liquid Glass
