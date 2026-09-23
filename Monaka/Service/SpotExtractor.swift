@@ -31,10 +31,16 @@ struct SpotExtractor: Sendable {
         /// A street address the text spells out. Not stored on the spot —
         /// it seeds the location picker's search (§8.1).
         var address: String?
+        /// A line or two on why you'd go, in the text's own language. Goes to
+        /// Notes, which is otherwise empty for a page and a whole caption for
+        /// a post — neither of which is what you want to read a month later.
+        var summary: String?
         var startDate: Date?
         var endDate: Date?
 
-        var isEmpty: Bool { title == nil && venue == nil && address == nil && startDate == nil && endDate == nil }
+        var isEmpty: Bool {
+            title == nil && venue == nil && address == nil && summary == nil && startDate == nil && endDate == nil
+        }
     }
 
     /// Apple Intelligence is on and the model is ready. Everything else — an
@@ -59,6 +65,8 @@ struct SpotExtractor: Sendable {
         var venue: String?
         @Guide(description: "The street address, if the text spells one out (e.g. after 住所). Null otherwise.")
         var address: String?
+        @Guide(description: "One or two short sentences on what this place is and what is worth having or seeing there, written in the same language as the text. Only what the text says. Null if it says nothing beyond the name.")
+        var summary: String?
         @Guide(description: "First day of the exhibition, event or pop-up, as yyyy-MM-dd. Null if none is stated, and always null for a permanent shop, café or restaurant.")
         var startDate: String?
         @Guide(description: "Last day of the exhibition, event or pop-up, as yyyy-MM-dd. Null if none is stated, and always null for a permanent shop, café or restaurant.")
@@ -133,6 +141,8 @@ struct SpotExtractor: Sendable {
         Dates are only for things that run for a period: an exhibition, an event, a pop-up. Report them as yyyy-MM-dd. Japanese forms such as 2026年4月11日(土)〜6月21日(日), 4/11(土)～6/21(日), 4月11日から6月21日まで all describe a run from the first date to the last. When a date has no year, use the year that makes the run current or upcoming relative to today. 令和N年 is the year 2018 + N. A text that only gives an opening date has no end date. A permanent shop, café or restaurant has no dates at all — a seasonal menu item, opening hours, closed days, a posting date or a ticket sale date are never the run.
 
         Title: the name of the exhibition, event, pop-up or shop as the text writes it (for a shop, the shop's own name, e.g. what follows 店名), without the site name or slogans. Venue: the place it is in, as a place name. Address: the street address if spelled out.
+
+        Summary: one or two short sentences, in the text's own language, on what the place is and what is worth having or seeing — the signature dish, what the exhibition shows, why the text recommends it. Plain sentences: no emoji, no hashtags, no prices unless they are the point, no "check it out". Say only what the text says.
         """
     }
 
@@ -150,6 +160,7 @@ struct SpotExtractor: Sendable {
         extraction.title = answer.title?.cleaned
         extraction.venue = extraction.isShop ? extraction.title : answer.venue?.cleaned
         extraction.address = answer.address?.cleaned
+        extraction.summary = answer.summary?.cleaned.map { String($0.prefix(maximumSummaryLength)) }
 
         // A café's "run" is a seasonal menu or the posting date (§13-8).
         guard answer.kind != .shop else { return extraction }
@@ -169,6 +180,10 @@ struct SpotExtractor: Sendable {
         }
         return extraction
     }
+
+    /// Long enough for two sentences of Japanese, short enough that Notes
+    /// stays a note.
+    private static let maximumSummaryLength = 160
 
     private static let calendar: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
@@ -201,6 +216,7 @@ extension SpotDraft {
             else if let venue = extraction.venue { self.venue = venue }
         }
         if suggestedAddress == nil { suggestedAddress = extraction.address }
+        if notes.isEmpty, let summary = extraction.summary { notes = summary }
         if startDate == nil, endDate == nil, extraction.startDate != nil || extraction.endDate != nil {
             startDate = extraction.startDate
             endDate = extraction.endDate
@@ -217,7 +233,11 @@ extension SpotDraft {
         self.title = title
         venue = extraction.isShop ? title : (extraction.venue ?? "")
         suggestedAddress = extraction.address
-        if notes.isEmpty { notes = caption.trimmingCharacters(in: .whitespacesAndNewlines) }
+        // The summary, not the caption: three screens of emoji and prices is
+        // not a note. The post itself is a tap away through the link.
+        if notes.isEmpty || notes == caption {
+            notes = extraction.summary ?? caption.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
         if extraction.startDate != nil || extraction.endDate != nil {
             startDate = extraction.startDate
             endDate = extraction.endDate
