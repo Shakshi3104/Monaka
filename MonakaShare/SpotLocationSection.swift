@@ -80,11 +80,13 @@ extension View {
                 initialQuery: draft.wrappedValue.location?.name
                     ?? draft.wrappedValue.suggestedAddress
                     ?? draft.wrappedValue.venue,
-                current: draft.wrappedValue.location
-            ) { location in
-                draft.wrappedValue.location = location
-                if draft.wrappedValue.venue.isEmpty { draft.wrappedValue.venue = location.name }
-            }
+                current: draft.wrappedValue.location,
+                onPick: { location in
+                    draft.wrappedValue.location = location
+                    if draft.wrappedValue.venue.isEmpty { draft.wrappedValue.venue = location.name }
+                },
+                onClose: { isPresented.wrappedValue = false }
+            )
         }
     }
 }

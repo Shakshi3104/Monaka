@@ -296,6 +296,8 @@ A resolver that fails fills nothing and is not an error (§13). The form opens e
 
 **The share extension has the same picker.** It used to be the exception — a share should be two taps, and searching for a building by hand is not two taps. `SpotExtractor` changed that: the venue, and often the street address, are already in the draft by the time the form appears, so the search lands on the right place in one tap. It stays optional there — only a title is required, and a spot saved without a pin gets one later in the app. `SpotLocationSection` is the one implementation both forms use.
 
+**Nothing in the extension may call `@Environment(\\.dismiss)`.** `ShareViewController` hosts the form as a *child* view controller, so a dismiss from inside it walks up and tears down the share sheet itself — the extension closes and nothing is saved. `ShareFormView` closes through `onFinish` / `onCancel`, and `LocationPickerView` through its `onClose` closure.
+
 ### 8.2 Google Maps links
 
 A share from the Google Maps app gives a short `https://maps.app.goo.gl/…` link, sometimes with the place name as a separate text item. `MapLinkResolver` follows the redirect with a `HEAD`-then-`GET` `URLSession` request and reads the resolved URL, which has the shape:
