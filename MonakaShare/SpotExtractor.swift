@@ -97,6 +97,10 @@ struct SpotExtractor: Sendable {
     }
 
     func extract(fromText text: String, subject: String? = nil, today: Date = .now) async -> Extraction? {
+        // A caption's last third is hashtags naming every neighbourhood in
+        // Tokyo. Left in, the model reads the text as being about all of
+        // them and answers nothing at all.
+        let text = Self.withoutHashtags(text)
         // Temperature 0: the same page should propose the same dates twice.
         let options = GenerationOptions(temperature: 0)
 
@@ -128,6 +132,13 @@ struct SpotExtractor: Sendable {
             }
         }
         return nil
+    }
+
+    static func withoutHashtags(_ text: String) -> String {
+        text.replacingOccurrences(of: #"#[^\s#]+"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"[ \t]+\n"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // MARK: - Prompt

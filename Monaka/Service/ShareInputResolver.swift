@@ -72,7 +72,7 @@ struct ShareInputResolver: Sendable {
         draft.imageURL = metadata.imageURL
         if Self.isSocialPost(url) {
             draft.title = Self.socialTitle(metadata.title ?? "")
-            draft.notes = metadata.description ?? ""
+            draft.notes = Self.socialCaption(metadata.description ?? "")
         } else {
             draft.title = metadata.title ?? ""
             draft.venue = metadata.siteName ?? ""
@@ -80,18 +80,57 @@ struct ShareInputResolver: Sendable {
         return draft
     }
 
-    /// `user on Instagram: "【銀座】実はここ超穴場…！990円で…"` → `【銀座】実はここ超穴場…！`.
+    /// `user on Instagram: "【銀座】実はここ超穴場…"` → `【銀座】実はここ超穴場…`,
+    /// and the localized `あかね - Instagram: "📍タカセ"` → `タカセ`.
     /// The wrapper is the network's, the first line of the caption is the
     /// post's. Still not a place's name — `SpotExtractor` replaces this when
     /// it can — but it's what you'd type if you had to.
     static func socialTitle(_ ogTitle: String) -> String {
         var text = ogTitle
-        if let range = text.range(of: #"^.+? on (Instagram|Threads|X|Twitter|TikTok|Facebook):\s*"#, options: .regularExpression) {
-            text = String(text[range.upperBound...])
+        // English "… on Instagram:" and the hyphenated form other locales use.
+        let wrappers = [
+            #"^.+? on (Instagram|Threads|X|Twitter|TikTok|Facebook):\s*"#,
+            #"^.+? [-–—] (Instagram|Threads|X|Twitter|TikTok|Facebook):\s*"#
+        ]
+        for pattern in wrappers {
+            if let range = text.range(of: pattern, options: .regularExpression) {
+                text = String(text[range.upperBound...])
+                break
+            }
         }
-        text = text.trimmingCharacters(in: CharacterSet(charactersIn: "\"“”「」 \n"))
         let firstLine = text.split(whereSeparator: \.isNewline).first.map(String.init) ?? text
-        return firstLine.trimmingCharacters(in: .whitespaces)
+        return Self.strippedOrnaments(firstLine)
+    }
+
+    /// Instagram's `og:description` is the caption wrapped in a byline —
+    /// `December 15, 2024、user: "📍タカセ …"` — and captions end in a wall of
+    /// hashtags naming every neighbourhood in Tokyo. Both mislead the model
+    /// about what the text is even about, and neither is a note worth
+    /// keeping. `SpotExtractor` drops hashtags too; this drops the byline.
+    static func socialCaption(_ description: String) -> String {
+        var text = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let range = text.range(of: #"^[^"\n]{0,120}:\s*""#, options: .regularExpression) {
+            text = String(text[range.upperBound...])
+            if text.hasSuffix("\"") { text.removeLast() }
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Leading pins and quote marks — `📍タカセ` is a shop called タカセ.
+    /// Brackets are left alone: 【銀座】 opens a caption and closes again, and
+    /// stripping the opener leaves the stray 】 behind.
+    private static func strippedOrnaments(_ text: String) -> String {
+        let quotes = CharacterSet(charactersIn: "\"“”·•- ")
+        var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        while let first = trimmed.unicodeScalars.first,
+              first.properties.isEmojiPresentation || quotes.contains(first) {
+            trimmed.unicodeScalars.removeFirst()
+            trimmed = trimmed.trimmingCharacters(in: .whitespaces)
+        }
+        while let last = trimmed.unicodeScalars.last, CharacterSet(charactersIn: "\"“” ").contains(last) {
+            trimmed.unicodeScalars.removeLast()
+        }
+        return trimmed.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// A post on a social network, where the page is a wrapper around a
