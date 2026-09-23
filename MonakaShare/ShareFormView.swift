@@ -45,6 +45,10 @@ struct ShareFormView: View {
                 }
 
                 sourceSection
+                // The model fills the venue and often the address, so the
+                // search lands on the right building in one tap — which is
+                // what a share can afford and couldn't before.
+                SpotLocationSection(draft: $draft)
                 runSection
 
                 Section {
@@ -52,13 +56,6 @@ struct ShareFormView: View {
                         .lineLimit(2...5)
                 } header: {
                     Text("Notes")
-                } footer: {
-                    if draft.location == nil {
-                        Label(
-                            "No location yet — pin it in Monaka to put it on the Map tab.",
-                            systemImage: "mappin.slash"
-                        )
-                    }
                 }
             }
             .environment(\.timeZone, Calendar.monaka.timeZone)
