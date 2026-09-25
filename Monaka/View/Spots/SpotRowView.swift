@@ -77,6 +77,8 @@ struct SpotThumbnail: View {
     let spot: Spot
     var size: CGFloat = 52
 
+    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
+
     private var url: URL? {
         guard let imageURL = spot.imageURL else { return nil }
         return URL(string: imageURL)
@@ -88,17 +90,38 @@ struct SpotThumbnail: View {
             .frame(width: size, height: size)
             .overlay {
                 if let url {
-                    AsyncImage(url: url) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        ProgressView()
+                    // Phase-based: the placeholder initializer keeps showing
+                    // its placeholder on failure too, so a dead og:image
+                    // left the row spinning forever.
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image): image.resizable().scaledToFill()
+                        case .failure: symbol
+                        default: ProgressView()
+                        }
                     }
                 } else {
-                    Image(systemName: spot.hasRun ? "ticket" : "mappin.and.ellipse")
-                        .foregroundStyle(.secondary)
+                    symbol
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    /// The same symbol the spot's Map pin carries.
+    private var symbol: some View {
+        Image(systemName: spot.symbolName(vocabulary: vocabularyRaw))
+            .foregroundStyle(.secondary)
+    }
+}
+
+extension Spot {
+    /// What kind of place this is, as an SF Symbol: the last tag with a chosen
+    /// icon, else ticket for a run and cup for somewhere to go anytime. Rows
+    /// and Map pins both draw from this, so a `Ramen` spot looks the same in
+    /// either.
+    func symbolName(vocabulary raw: String) -> String {
+        TagVocabulary.chosenIcon(forLastOf: tags, in: raw)
+            ?? (hasRun ? "ticket.fill" : "cup.and.saucer.fill")
     }
 }
 
