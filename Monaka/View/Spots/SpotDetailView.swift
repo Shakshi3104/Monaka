@@ -133,12 +133,23 @@ struct SpotDetailView: View {
     @ViewBuilder
     private var headerImage: some View {
         if let imageURL = spot.imageURL, let url = URL(string: imageURL) {
-            AsyncImage(url: url) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Color(.tertiarySystemFill)
-                    .overlay { ProgressView() }
+            // A dead og:image drops out instead of holding 190pt of spinner —
+            // the placeholder initializer shows its placeholder on failure too.
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    headerFrame(image.resizable().scaledToFill())
+                case .failure:
+                    EmptyView()
+                default:
+                    headerFrame(Color(.tertiarySystemFill).overlay { ProgressView() })
+                }
             }
+        }
+    }
+
+    private func headerFrame(_ content: some View) -> some View {
+        content
             .frame(height: 190)
             .frame(maxWidth: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -146,7 +157,6 @@ struct SpotDetailView: View {
                 RoundedRectangle(cornerRadius: 14)
                     .strokeBorder(.separator.opacity(0.5))
             }
-        }
     }
 
     /// `東京都美術館 · 1 day left` — one line, the countdown carrying the only
@@ -292,16 +302,15 @@ struct SpotDetailView: View {
     }
 
     private var tagSection: some View {
+        // Wrapped, as in the form — a sideways scroll hid every tag past the
+        // third.
         Section("Tags") {
-            ScrollView(.horizontal) {
-                HStack(spacing: 6) {
-                    ForEach(spot.tags, id: \.self) { tag in
-                        TagChip(tag)
-                    }
+            FlowLayout {
+                ForEach(spot.tags, id: \.self) { tag in
+                    TagChip(tag)
                 }
-                .padding(.vertical, 2)
             }
-            .scrollIndicators(.hidden)
+            .padding(.vertical, 2)
         }
     }
 

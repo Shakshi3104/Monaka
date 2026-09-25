@@ -334,11 +334,22 @@ struct SpotImagePreview: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AsyncImage(url: url) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Color(.tertiarySystemFill)
-                    .overlay { ProgressView() }
+            // Phase-based so a dead image says so instead of spinning — this
+            // row is where the user decides whether to keep it.
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                case .failure:
+                    Color(.tertiarySystemFill)
+                        .overlay {
+                            Image(systemName: "photo.badge.exclamationmark")
+                                .foregroundStyle(.secondary)
+                        }
+                default:
+                    Color(.tertiarySystemFill)
+                        .overlay { ProgressView() }
+                }
             }
             .frame(width: 56, height: 56)
             .clipShape(RoundedRectangle(cornerRadius: 8))

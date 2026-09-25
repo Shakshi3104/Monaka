@@ -208,13 +208,21 @@ private struct FeaturedSpotCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let imageURL {
-                AsyncImage(url: imageURL) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Color(.tertiarySystemFill)
+                // A dead og:image drops out rather than leaving a grey band —
+                // the placeholder initializer shows its placeholder on failure.
+                AsyncImage(url: imageURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                            .frame(height: 150)
+                            .clipped()
+                    case .failure:
+                        EmptyView()
+                    default:
+                        Color(.tertiarySystemFill)
+                            .frame(height: 150)
+                    }
                 }
-                .frame(height: 150)
-                .clipped()
             }
 
             VStack(alignment: .leading, spacing: 6) {

@@ -158,7 +158,22 @@ struct SpotMapView: View {
         .animation(.snappy(duration: 0.25), value: selectedSpotID)
         .onAppear {
             refreshLocationAccess()
-            camera = .region(Self.region(framing: pinned.compactMap(\.coordinate)))
+            frameAllPins()
+        }
+        // A filter can leave only pins that are off screen, which reads as
+        // "nothing matched". Only the filters reframe — an edit or a check-off
+        // shouldn't throw away wherever the user has panned to.
+        .onChange(of: selectedTag) { frameAllPins(animated: true) }
+        .onChange(of: showsVisited) { frameAllPins(animated: true) }
+        .onChange(of: showsEnded) { frameAllPins(animated: true) }
+    }
+
+    private func frameAllPins(animated: Bool = false) {
+        let region = MapCameraPosition.region(Self.region(framing: pinned.compactMap(\.coordinate)))
+        if animated {
+            withAnimation { camera = region }
+        } else {
+            camera = region
         }
     }
 
@@ -175,11 +190,7 @@ struct SpotMapView: View {
     /// and a `Museum` pin are the whole reason to look at this tab. Visited
     /// keeps its checkmark: there, "been" outranks what kind of place it is.
     private func icon(for spot: Spot) -> String {
-        if spot.isVisited { return "checkmark" }
-        if let tagged = TagVocabulary.chosenIcon(forLastOf: spot.tags, in: vocabularyRaw) {
-            return tagged
-        }
-        return spot.hasRun ? "ticket.fill" : "cup.and.saucer.fill"
+        spot.isVisited ? "checkmark" : spot.symbolName(vocabulary: vocabularyRaw)
     }
 
     /// Not quite the row's countdown tint: an Anytime spot has no countdown, so
