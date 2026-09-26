@@ -51,7 +51,7 @@ No SPM dependencies. Everything the app needs is in the standard library + Swift
 - **The run is two Optionals** (`startDate`, `endDate`), not a required range. See §7 for how the four combinations are interpreted.
 - **Coordinates are stored; nothing else about the place is.** `latitude` / `longitude` / `address` / `mapURL`. No Google API key, no Place ID, no cached tiles, no geocoding at import time.
 - **Tags are a plain `[String]`** on `Spot`, not a relationship and not a single category — an exhibition can be `Exhibition` + `Ends soon` + `Ueno` at once. Unlike `Feed.category` in yomy, there is no tag entity: the spot form lays every known tag out as a chip you tap on and off (wrapped by `FlowLayout`, with a New Tag chip at the end) so the vocabulary converges without a tag table, and `TagsView` rewrites every spot when one is renamed.
-- **A tag's name and icon live in `TagVocabulary`** (`@AppStorage`, JSON), not SwiftData. Without a tag entity there is nowhere else for a zero-spot tag or an SF Symbol to exist, and setting a vocabulary up in advance is worth having. It stays strictly vocabulary: `Spot.tags` remains the only answer to *which* spots carry a tag. A tag typed straight into a spot's form has no entry and falls back to `TagVocabulary.defaultIcon` until one is chosen in Settings.
+- **A tag's name and icon live in `TagVocabulary`** (`@AppStorage` in the App Group's defaults, `TagVocabulary.defaults`, JSON), not SwiftData — the App Group so the share extension can offer them too; `moveToAppGroupIfNeeded()` copied the pre-App-Group value across once. Without a tag entity there is nowhere else for a zero-spot tag or an SF Symbol to exist, and setting a vocabulary up in advance is worth having. It stays strictly vocabulary: `Spot.tags` remains the only answer to *which* spots carry a tag. A tag typed straight into a spot's form has no entry and falls back to `TagVocabulary.defaultIcon` until one is chosen in Settings.
 - **No sync.** Single-device only. The `@Model` still follows the CloudKit constraints in §9 so the option stays open.
 
 ```swift
@@ -288,7 +288,7 @@ The share extension and the in-app URL field both hand their input to `ShareInpu
 | any other URL | `OGMetadataFetcher` | `title`, `imageURL`, `venue` (`og:site_name`), `urlString` |
 | plain text | `SpotExtractor` (a caption) | `title` (the place's name), `venue`, `notes` (the caption), `suggestedAddress`; a run only for an exhibition / event / pop-up |
 
-After the OGP step, any web page also goes through `SpotExtractor` for what OGP can't give: a venue named in the body, the run, and a summary for `notes` — one or two sentences on why you'd go, in the page's own language, replacing a pasted caption and filling the empty Notes of an ordinary page. It fills **only empty fields**, and a run it proposes sets `SpotDraft.isRunSuggested` so the form says "Read from the page — check it against the site" until a date is touched. The "is this about one thing" gate applies to a **page** only. A shared post is one a person picked, and the model answered `false` for a café post it had already filled in correctly — name, address and all — so the caption paths pass `isCaption: true` and keep the fields. A caption reaches the model stripped of hashtags and of Instagram's `date、user: "…"` byline — 30 hashtags naming every neighbourhood in Tokyo made it answer that the text was about all of them, i.e. nothing. The model is asked whether the page is about *one* thing and what kind (`shop` never gets dates, and a shop is its own venue — `venue = title`, as a Google Maps place arrives), and is grounded on the OGP title; Save is disabled in every form while the page is being read; listing pages and homepages can still yield their first item, which is why the run is a flagged suggestion and never a silent write.
+After the OGP step, any web page also goes through `SpotExtractor` for what OGP can't give: a venue named in the body, the run, and a summary for `notes` — one or two sentences on why you'd go, in the page's own language, replacing a pasted caption and filling the empty Notes of an ordinary page. It fills **only empty fields**, and a run it proposes sets `SpotDraft.isRunSuggested` so the form says "Read from the page — check it against the site" until a date is touched. The "is this about one thing" gate applies to a **page** only. A shared post is one a person picked, and the model answered `false` for a café post it had already filled in correctly — name, address and all — so the caption paths pass `isCaption: true` and keep the fields. A caption reaches the model stripped of hashtags and of Instagram's `date、user: "…"` byline — 30 hashtags naming every neighbourhood in Tokyo made it answer that the text was about all of them, i.e. nothing. The model is asked whether the page is about *one* thing and what kind (`shop` never gets dates, and a shop is its own venue — `venue = title`, as a Google Maps place arrives), and is grounded on the OGP title. The same read then asks, **one yes/no per tag**, which of the user's existing tags (vocabulary + tags in use) clearly apply — a dynamic schema built at run time, so it can never coin a tag, at most three, and zero is the expected answer when nothing fits. Asked for a list instead, it filled the list for places nothing fit. Suggested tags go only onto a draft with no tags yet and set `SpotDraft.areTagsSuggested` until a tag is tapped. Save is disabled in every form while the page is being read; listing pages and homepages can still yield their first item, which is why the run is a flagged suggestion and never a silent write.
 
 A resolver that fails fills nothing and is not an error (§13). The form opens either way.
 
@@ -363,9 +363,9 @@ Two things still need Xcode's GUI and must be handed back to the user:
 - New **targets** (the share extension, the widget extension)
 - **Capabilities** (App Groups) and asset catalog entries created through the asset editor
 
-Also: a synchronized folder can only belong to one target. These ten files are therefore **duplicated verbatim** into `MonakaShare/`:
+Also: a synchronized folder can only belong to one target. These thirteen files are therefore **duplicated verbatim** into `MonakaShare/`:
 
-`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`, `SpotExtractor.swift`, `ClearableTextField.swift`, `SpotMapSnapshot.swift`, `PlaceSearch.swift`
+`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`, `SpotExtractor.swift`, `ClearableTextField.swift`, `SpotMapSnapshot.swift`, `PlaceSearch.swift`, `TagVocabulary.swift`, `FlowLayout.swift`, `TagChip.swift`
 
 **Edit both copies together**, and keep them byte-identical — `diff` them after touching any of them. Only files with no app-only dependency belong on this list; anything that interprets a spot (`Spot+Period.swift`) stays app-only.
 
@@ -388,7 +388,7 @@ Monaka/
 │   ├── Spot+Period.swift           run interpretation, section assignment, countdown
 │   ├── Spot+Location.swift         coordinate accessors, distance
 │   ├── SpotDraft.swift             what every capture route produces, + PickedLocation
-│   ├── TagVocabulary.swift         @AppStorage tag names + icons, §3
+│   ├── TagVocabulary.swift         tag names + icons in the App Group's defaults, §3 (duplicated in MonakaShare/)
 │   └── Spot+Sample.swift           #if DEBUG preview fixtures
 ├── Service/
 │   ├── OGMetadataFetcher.swift     og:title / og:image / og:site_name
@@ -401,7 +401,8 @@ Monaka/
 │   └── RunReminder.swift           local notification 3 days before a run ends, opt-in (Phase 3)
 └── View/
     ├── SpotMapSnapshot.swift       one pin, no interaction (duplicated in MonakaShare/)
-    ├── FlowLayout.swift            wrapping chip layout — SwiftUI has none
+    ├── FlowLayout.swift            wrapping chip layout — SwiftUI has none (duplicated in MonakaShare/)
+    ├── TagChip.swift               one tag as a capsule, every form + detail (duplicated in MonakaShare/)
     ├── TagFilterMenu.swift         the tag filter menu All and Map share
     ├── ClearableTextField.swift    TextField + ⓧ, both forms (duplicated in MonakaShare/)
     ├── Today/
@@ -409,7 +410,7 @@ Monaka/
     ├── Spots/
     │   ├── SpotListView.swift      the full sectioned list (All tab)
     │   ├── SpotDetailView.swift    header image, run pills, notes, link, Visited button
-    │   ├── SpotFormView.swift      the form Add and Edit share, + TagChip
+    │   ├── SpotFormView.swift      the form Add and Edit share
     │   ├── SpotLocationSection.swift the Location row the app's forms show (app-only)
     │   ├── AddSpotView.swift       form + PasteButton + OGP autofill + location picker
     │   ├── EditSpotView.swift
@@ -480,6 +481,7 @@ MonakaShare/                        share extension target (Phase 2)
 - [ ] `CalendarView` (month grid with run bars)
 - [ ] Photos taken on the visit
 - [x] `SpotExtractor` — Foundation Models proposes venue / run, and a caption's name (§8.1)
+- [x] Suggested tags — the model picks from the user's own tags on share and on URL autofill (§8.1)
 - [x] App icon — `AppIcon.icon` (Icon Composer): a warm-tinted full moon on a night sky, the moon the wafer was likened to
 - [ ] About with the name's origin
 

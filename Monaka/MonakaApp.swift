@@ -12,6 +12,11 @@ struct MonakaApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(RunReminder.storageKey) private var remindsBeforeEnd = false
 
+    init() {
+        // Before any view reads it through `@AppStorage`.
+        TagVocabulary.moveToAppGroupIfNeeded()
+    }
+
     let modelContainer: ModelContainer = {
         do {
             return try SharedStore.makeModelContainer()

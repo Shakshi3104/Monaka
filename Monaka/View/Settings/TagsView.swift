@@ -12,7 +12,7 @@ import SwiftData
 
 struct TagsView: View {
     @Query private var spots: [Spot]
-    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
+    @AppStorage(TagVocabulary.storageKey, store: TagVocabulary.defaults) private var vocabularyRaw = ""
 
     @State private var deleting: String?
 
