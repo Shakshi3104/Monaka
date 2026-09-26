@@ -32,6 +32,9 @@ struct SpotDraft: Equatable {
     var suggestedAddress: String?
 
     var tags: [String] = []
+    /// The tags came from `SpotExtractor` picking among the user's own. The
+    /// form says so until a tag is tapped, like `isRunSuggested`.
+    var areTagsSuggested = false
 
     var hasLocation: Bool { location != nil }
 

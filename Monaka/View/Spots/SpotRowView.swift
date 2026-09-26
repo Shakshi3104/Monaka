@@ -77,7 +77,7 @@ struct SpotThumbnail: View {
     let spot: Spot
     var size: CGFloat = 52
 
-    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
+    @AppStorage(TagVocabulary.storageKey, store: TagVocabulary.defaults) private var vocabularyRaw = ""
 
     private var url: URL? {
         guard let imageURL = spot.imageURL else { return nil }

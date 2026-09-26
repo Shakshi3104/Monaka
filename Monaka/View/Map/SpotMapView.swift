@@ -22,7 +22,7 @@ struct SpotMapView: View {
     /// Both live in Settings → Map; the toolbar is for the tag filter.
     @AppStorage("mapShowsVisited") private var showsVisited = false
     @AppStorage("mapShowsEnded") private var showsEnded = false
-    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
+    @AppStorage(TagVocabulary.storageKey, store: TagVocabulary.defaults) private var vocabularyRaw = ""
 
     @State private var selectedTag: String?
 

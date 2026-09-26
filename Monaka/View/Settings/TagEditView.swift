@@ -12,7 +12,7 @@ import SwiftData
 struct TagEditView: View {
     @Environment(\.dismiss) private var dismiss
     @Query private var spots: [Spot]
-    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
+    @AppStorage(TagVocabulary.storageKey, store: TagVocabulary.defaults) private var vocabularyRaw = ""
 
     /// `nil` when creating.
     let tag: String?
@@ -29,7 +29,7 @@ struct TagEditView: View {
         // but `task` re-runs every time this view comes back on screen — so
         // returning from the icon picker reset the icon to the stored one and
         // the choice was lost.
-        let raw = UserDefaults.standard.string(forKey: TagVocabulary.storageKey) ?? ""
+        let raw = TagVocabulary.defaults.string(forKey: TagVocabulary.storageKey) ?? ""
         _icon = State(initialValue: tag.map { TagVocabulary.icon(for: $0, in: raw) } ?? TagVocabulary.defaultIcon)
     }
 

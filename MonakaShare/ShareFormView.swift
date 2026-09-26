@@ -20,6 +20,17 @@ struct ShareFormView: View {
     @State private var isExtracting = false
     @State private var isPinning = false
     @State private var saveFailed = false
+    /// Tags already on spots in the shared store, read once on open.
+    @State private var tagsInUse: [String] = []
+    @AppStorage(TagVocabulary.storageKey, store: TagVocabulary.defaults) private var vocabularyRaw = ""
+
+    /// Same order as the app's form: the vocabulary as Settings lists it,
+    /// then names only in use on spots, then whatever the draft carries.
+    private var allTags: [String] {
+        var seen = Set<String>()
+        return (TagVocabulary.decode(vocabularyRaw).map(\.name) + tagsInUse + draft.tags)
+            .filter { seen.insert($0).inserted }
+    }
 
     private var isSaveable: Bool {
         !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -48,6 +59,7 @@ struct ShareFormView: View {
                 sourceSection
                 locationSection
                 runSection
+                tagSection
 
                 Section {
                     TextField("Closed Mondays, book ahead…", text: $draft.notes, axis: .vertical)
@@ -76,6 +88,7 @@ struct ShareFormView: View {
                 Text("Monaka's shared store is unavailable.")
             }
             .task {
+                tagsInUse = Self.tagsInStore()
                 guard let input = await load() else { isResolving = false; return }
                 let resolved = await ShareInputResolver().resolve(input)
                 draft.fillEmptyFields(from: resolved)
@@ -101,13 +114,13 @@ struct ShareFormView: View {
         case let .text(text) where ShareInputResolver.firstURL(in: text) == nil:
             // A caption. The resolver made the whole thing the title; the
             // model finds the name in it.
-            if let extraction = await SpotExtractor().extract(fromText: text, isCaption: true) {
+            if let extraction = await SpotExtractor().extract(fromText: text, isCaption: true, tags: allTags) {
                 draft.adopt(extraction, caption: text)
             }
         case let .text(text):
             // "name https://…" — the URL is the page to read.
             guard let url = ShareInputResolver.firstURL(in: text), !MapLinkResolver.isMapLink(url) else { return }
-            if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
+            if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank, tags: allTags) {
                 draft.fillEmptyFields(from: extraction)
             }
         case let .url(url):
@@ -116,10 +129,10 @@ struct ShareFormView: View {
                 // An Instagram post: the caption is in Notes now, and the
                 // og:title (“user on Instagram: …”) is no title.
                 if let caption = resolved.notes.nilIfBlank,
-                   let extraction = await SpotExtractor().extract(fromText: caption, isCaption: true) {
+                   let extraction = await SpotExtractor().extract(fromText: caption, isCaption: true, tags: allTags) {
                     draft.adopt(extraction, caption: caption)
                 }
-            } else if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
+            } else if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank, tags: allTags) {
                 draft.fillEmptyFields(from: extraction)
             }
         }
@@ -255,6 +268,48 @@ struct ShareFormView: View {
         } footer: {
             Text(draft.runFooter)
         }
+    }
+
+    // MARK: - Tags
+
+    /// Every tag there is, as chips — the ones the model picked already on.
+    /// No New Tag chip: naming one needs an alert with a text field, and
+    /// anything presented from here risks tearing the share sheet down (§8.1).
+    @ViewBuilder
+    private var tagSection: some View {
+        if !allTags.isEmpty {
+            Section {
+                FlowLayout {
+                    ForEach(allTags, id: \.self) { tag in
+                        Button {
+                            draft.areTagsSuggested = false
+                            if let index = draft.tags.firstIndex(of: tag) {
+                                draft.tags.remove(at: index)
+                            } else {
+                                draft.tags.append(tag)
+                            }
+                        } label: {
+                            TagChip(tag, isSelected: draft.tags.contains(tag))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 2)
+            } header: {
+                Text("Tags")
+            } footer: {
+                if draft.areTagsSuggested {
+                    Text("Picked from your tags by reading the page — tap one to take it off.")
+                }
+            }
+        }
+    }
+
+    private static func tagsInStore() -> [String] {
+        guard let container = try? SharedStore.makeModelContainer(),
+              let spots = try? ModelContext(container).fetch(FetchDescriptor<Spot>())
+        else { return [] }
+        return spots.flatMap(\.tags)
     }
 
     // MARK: - Save

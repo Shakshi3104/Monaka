@@ -26,6 +26,9 @@ struct SpotExtractor: Sendable {
         /// form gets the same string in both fields — a café saved from
         /// Google Maps arrives that way too (§3).
         var isShop = false
+        /// What the model called it — exhibition, event, popup, shop. Only
+        /// fed back to the model to help it pick tags.
+        var kind: String?
         var title: String?
         var venue: String?
         /// A street address the text spells out. Not stored on the spot —
@@ -37,6 +40,9 @@ struct SpotExtractor: Sendable {
         var summary: String?
         var startDate: Date?
         var endDate: Date?
+        /// Picked from the tags passed in, never invented — the schema only
+        /// lets the model name one of them. Empty when none clearly fits.
+        var tags: [String] = []
 
         var isEmpty: Bool {
             title == nil && venue == nil && address == nil && summary == nil && startDate == nil && endDate == nil
@@ -88,12 +94,15 @@ struct SpotExtractor: Sendable {
     /// called the page — the model reports on that one thing, and a subject
     /// that is a site or company name ends the exercise. `today` anchors a
     /// date the page writes without a year.
-    func extract(from url: URL, subject: String? = nil, today: Date = .now) async -> Extraction? {
+    ///
+    /// `tags` is every tag the user has; the model may put some of them on
+    /// the spot (`Extraction.tags`). Empty skips that step.
+    func extract(from url: URL, subject: String? = nil, tags: [String] = [], today: Date = .now) async -> Extraction? {
         guard Self.isAvailable,
               let html = await PageText.fetch(url),
               let text = PageText.digest(html)
         else { return nil }
-        return await extract(fromText: text, subject: subject, today: today)
+        return await extract(fromText: text, subject: subject, tags: tags, today: today)
     }
 
     /// `isCaption` says a person chose to share *this post*, which settles
@@ -101,7 +110,7 @@ struct SpotExtractor: Sendable {
     /// It answered `false` for a café post that it had already filled in
     /// correctly — name, address and all — and the gate threw the lot away.
     /// A web page keeps the gate: that one really might be a listing.
-    func extract(fromText text: String, subject: String? = nil, isCaption: Bool = false, today: Date = .now) async -> Extraction? {
+    func extract(fromText text: String, subject: String? = nil, isCaption: Bool = false, tags: [String] = [], today: Date = .now) async -> Extraction? {
         // A caption's last third is hashtags naming every neighbourhood in
         // Tokyo. Left in, the model reads the text as being about all of
         // them and answers nothing at all.
@@ -114,6 +123,7 @@ struct SpotExtractor: Sendable {
         // overflow error was renamed between iOS 26 and 27, so any failure
         // gets the one retry rather than matching either name.
         var candidate = text
+        var extraction: Extraction?
         for attempt in 0..<2 {
             // A fresh session each time — the failed turn stays in the old
             // one's transcript and would count against the window again.
@@ -129,15 +139,85 @@ struct SpotExtractor: Sendable {
                     generating: Answer.self,
                     options: options
                 ).content
-                let extraction = Self.validate(answer, today: today, isCaption: isCaption)
-                return extraction.isEmpty ? nil : extraction
+                extraction = Self.validate(answer, today: today, isCaption: isCaption)
+                break
             } catch {
                 guard attempt == 0 else { return nil }
                 candidate = String(candidate.prefix(candidate.count / 2))
             }
         }
-        return nil
+        guard var extraction, !extraction.isEmpty else { return nil }
+        extraction.tags = await Self.pickTags(from: tags, for: extraction, text: candidate, options: options)
+        return extraction
     }
+
+    // MARK: - Tags
+
+    /// A second, small turn: which of the user's own tags fit. Separate from
+    /// `Answer` because the tags are only known at run time, so the schema is
+    /// built then — one yes/no per tag, which the model can't answer with a
+    /// tag that doesn't exist.
+    ///
+    /// Per tag rather than "pick from this list": asked for a list, the model
+    /// filled it for places nothing fit (a used bookshop came back
+    /// `Exhibition`, a bakery `Café`); asked about each tag on its own, it
+    /// says no. A wrong tag files a spot where the user won't look for it.
+    private static func pickTags(from tags: [String], for extraction: Extraction, text: String, options: GenerationOptions) async -> [String] {
+        var seen = Set<String>()
+        let choices = Array(tags.filter { !$0.isEmpty && seen.insert($0).inserted }.prefix(maximumTagChoices))
+        guard !choices.isEmpty else { return [] }
+
+        // Indexed keys: a tag name can be anything, a property name can't.
+        let root = DynamicGenerationSchema(
+            name: "TagChoice",
+            properties: choices.enumerated().map { index, name in
+                DynamicGenerationSchema.Property(
+                    name: "tag\(index)",
+                    description: "Does the tag “\(name)” clearly apply to this place? True only if the text shows it.",
+                    schema: DynamicGenerationSchema(type: Bool.self)
+                )
+            }
+        )
+        guard let schema = try? GenerationSchema(root: root, dependencies: []) else { return [] }
+
+        let facts = [
+            extraction.title.map { "Name: \($0)" },
+            extraction.kind.map { "Kind: \($0)" },
+            extraction.venue.map { "Venue: \($0)" },
+            extraction.address.map { "Address: \($0)" },
+            extraction.summary.map { "Summary: \($0)" },
+        ].compactMap { $0 }.joined(separator: "\n")
+        let prompt = """
+        The user's tags: \(choices.joined(separator: ", "))
+
+        \(facts)
+
+        Text:
+        \(text.prefix(tagTextLimit))
+        """
+
+        let session = LanguageModelSession(instructions: tagInstructions)
+        guard let content = try? await session.respond(to: prompt, schema: schema, options: options).content
+        else { return [] }
+        let picked = choices.enumerated().compactMap { index, name in
+            (try? content.value(Bool.self, forProperty: "tag\(index)")) == true ? name : nil
+        }
+        return Array(picked.prefix(maximumTags))
+    }
+
+    /// A handful is a tag; more is the whole vocabulary again.
+    private static let maximumTags = 3
+    /// One property per tag, and the context window is 4,096 tokens. Past
+    /// this the vocabulary's first tags (the order Settings shows) are asked
+    /// about and the rest aren't.
+    private static let maximumTagChoices = 40
+    /// The facts above carry most of it; the text is there for what they
+    /// leave out (the area a caption names, what kind of food).
+    private static let tagTextLimit = 800
+
+    private static let tagInstructions = """
+    You file a place the user wants to visit under the tags they already use. Pick a tag only when the text clearly supports it: a tag naming a kind of place (Exhibition, Café, Ramen) must match what this place is; a tag naming an area or station must match where it is; a tag naming a mood, occasion or plan only if the text says so. Tags may be in English or Japanese — match on meaning, not spelling. An empty list is a good answer: a wrong tag is worse than none. Never pick a tag just because it is in the list.
+    """
 
     static func withoutHashtags(_ text: String) -> String {
         text.replacingOccurrences(of: #"#[^\s#]+"#, with: "", options: .regularExpression)
@@ -174,6 +254,7 @@ struct SpotExtractor: Sendable {
         // post is not that: someone picked it.
         guard answer.isAboutOneThing || isCaption else { return extraction }
         extraction.isShop = answer.kind == .shop
+        extraction.kind = "\(answer.kind)"
         extraction.title = answer.title?.cleaned
         extraction.venue = extraction.isShop ? extraction.title : answer.venue?.cleaned
         extraction.address = answer.address?.cleaned
@@ -239,6 +320,15 @@ extension SpotDraft {
             endDate = extraction.endDate
             isRunSuggested = true
         }
+        adoptTags(from: extraction)
+    }
+
+    /// Only onto a draft with no tags yet — anything the user already put on
+    /// it is theirs.
+    private mutating func adoptTags(from extraction: SpotExtractor.Extraction) {
+        guard tags.isEmpty, !extraction.tags.isEmpty else { return }
+        tags = extraction.tags
+        areTagsSuggested = true
     }
 
     /// A shared caption — an Instagram post about a café, say — with no URL
@@ -260,6 +350,7 @@ extension SpotDraft {
             endDate = extraction.endDate
             isRunSuggested = true
         }
+        adoptTags(from: extraction)
     }
 }
 

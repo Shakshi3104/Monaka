@@ -12,7 +12,7 @@ struct TagFilterMenu: View {
     let tags: [String]
     @Binding var selection: String?
 
-    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
+    @AppStorage(TagVocabulary.storageKey, store: TagVocabulary.defaults) private var vocabularyRaw = ""
 
     var body: some View {
         Menu {

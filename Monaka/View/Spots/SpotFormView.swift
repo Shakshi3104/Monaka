@@ -23,7 +23,7 @@ struct SpotFormView: View {
 
     /// Every tag already in use, for the suggestion row.
     @Query private var spots: [Spot]
-    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
+    @AppStorage(TagVocabulary.storageKey, store: TagVocabulary.defaults) private var vocabularyRaw = ""
 
     @State private var tagInput = ""
     @State private var isNamingTag = false
@@ -155,10 +155,10 @@ struct SpotFormView: View {
             // The caption is the page. The og:title (“user on Instagram: …”)
             // is no title, so this path replaces it.
             guard let caption = resolved.notes.nilIfBlank,
-                  let extraction = await SpotExtractor().extract(fromText: caption, isCaption: true)
+                  let extraction = await SpotExtractor().extract(fromText: caption, isCaption: true, tags: allTags)
             else { return }
             draft.adopt(extraction, caption: caption)
-        } else if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank) {
+        } else if let extraction = await SpotExtractor().extract(from: url, subject: resolved.title.nilIfBlank, tags: allTags) {
             draft.fillEmptyFields(from: extraction)
         }
     }
@@ -170,7 +170,7 @@ struct SpotFormView: View {
         isFetchingMetadata = true
         isBusy.wrappedValue = true
         defer { isFetchingMetadata = false; isBusy.wrappedValue = false }
-        if let extraction = await SpotExtractor().extract(fromText: caption, isCaption: true) {
+        if let extraction = await SpotExtractor().extract(fromText: caption, isCaption: true, tags: allTags) {
             draft.adopt(extraction, caption: caption)
         }
     }
@@ -264,7 +264,11 @@ struct SpotFormView: View {
         } header: {
             Text("Tags")
         } footer: {
-            Text("Tap to put a tag on this spot. Tags are plain labels — renaming one later doesn't update spots already saved.")
+            if draft.areTagsSuggested {
+                Text("Picked from your tags by reading the page — tap one to take it off.")
+            } else {
+                Text("Tap to put a tag on this spot. Tags are plain labels — renaming one later doesn't update spots already saved.")
+            }
         }
         .alert("New Tag", isPresented: $isNamingTag) {
             TextField("Tag", text: $tagInput)
@@ -277,6 +281,7 @@ struct SpotFormView: View {
     }
 
     private func toggleTag(_ tag: String) {
+        draft.areTagsSuggested = false
         if let index = draft.tags.firstIndex(of: tag) {
             draft.tags.remove(at: index)
         } else {
@@ -287,6 +292,7 @@ struct SpotFormView: View {
     private func addTag(_ tag: String) {
         defer { tagInput = "" }
         guard let trimmed = tag.nilIfBlank, !draft.tags.contains(trimmed) else { return }
+        draft.areTagsSuggested = false
         draft.tags.append(trimmed)
     }
 }
@@ -373,42 +379,3 @@ struct SpotImagePreview: View {
     }
 }
 
-struct TagChip: View {
-    /// Read here rather than passed in, so every caller picks the tag's icon up
-    /// without knowing the vocabulary exists.
-    @AppStorage(TagVocabulary.storageKey) private var vocabularyRaw = ""
-
-    let tag: String
-    /// Overrides the tag's own icon — the `plus` on the New Tag chip, which
-    /// names no tag yet.
-    var icon: String?
-    /// Filled when the tag is on the spot, outlined when it's one you could
-    /// add. A chip that reads the same either way is a chip you have to tap
-    /// to interrogate.
-    var isSelected = true
-
-    init(_ tag: String, icon: String? = nil, isSelected: Bool = true) {
-        self.tag = tag
-        self.icon = icon
-        self.isSelected = isSelected
-    }
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon ?? TagVocabulary.icon(for: tag, in: vocabularyRaw))
-                .font(.caption2)
-            Text(tag)
-        }
-        .font(.caption)
-        .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background {
-            if isSelected {
-                Capsule().fill(Color.accentColor.opacity(0.15))
-            } else {
-                Capsule().strokeBorder(Color.secondary.opacity(0.35))
-            }
-        }
-    }
-}
