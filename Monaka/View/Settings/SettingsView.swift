@@ -88,7 +88,7 @@ struct SettingsView: View {
                     case .denied:
                         Text("Location is denied in Settings, so the list keeps its usual order.")
                     case .notDetermined:
-                        Text("Orders each section nearest first. Turning this on asks for your location once, and it's used for nothing else.")
+                        Text("Orders each section nearest first. Turning this on asks for your location once. It's used only for this and to show where you are on the Map.")
                     case .authorized:
                         Text("Each section is ordered nearest first. Sections themselves still go by how much of the run is left.")
                     }
