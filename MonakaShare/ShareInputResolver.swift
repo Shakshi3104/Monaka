@@ -76,6 +76,7 @@ struct ShareInputResolver: Sendable {
         } else {
             draft.title = metadata.title ?? ""
             draft.venue = metadata.siteName ?? ""
+            draft.isVenueFromSiteName = metadata.siteName != nil
         }
         return draft
     }

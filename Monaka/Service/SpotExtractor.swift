@@ -63,7 +63,7 @@ struct SpotExtractor: Sendable {
     struct Answer {
         @Guide(description: "True only if this page is dedicated to one specific exhibition, event, pop-up store or shop. False for a homepage, a news or exhibition list, a company site or anything else.")
         var isAboutOneThing: Bool
-        @Guide(description: "What the one thing is. shop for a permanent shop, café, restaurant or bakery; popup for a limited-time store; exhibition for a museum or gallery show; event for anything else with a date.")
+        @Guide(description: "What the one thing is. shop only when the text is about a permanent shop, café, restaurant or bakery itself; popup for a limited-time store; exhibition for a museum or gallery show; event for anything else with a date — including a limited-time product, menu, collaboration or campaign sold at an existing shop, whose venue is that shop.")
         var kind: Kind
         @Guide(description: "The exhibition, event, pop-up or shop name, exactly as the page writes it. Null if the page is not about one such thing.")
         var title: String?
@@ -162,6 +162,9 @@ struct SpotExtractor: Sendable {
     /// filled it for places nothing fit (a used bookshop came back
     /// `Exhibition`, a bakery `Café`); asked about each tag on its own, it
     /// says no. A wrong tag files a spot where the user won't look for it.
+    /// "Clearly applies" still let near misses through — a bakery came back
+    /// カフェ, an onigiri shop カフェ and パン — so the question is whether the
+    /// user would file *this* place there, and a related kind is a no.
     private static func pickTags(from tags: [String], for extraction: Extraction, text: String, options: GenerationOptions) async -> [String] {
         var seen = Set<String>()
         let choices = Array(tags.filter { !$0.isEmpty && seen.insert($0).inserted }.prefix(maximumTagChoices))
@@ -173,7 +176,7 @@ struct SpotExtractor: Sendable {
             properties: choices.enumerated().map { index, name in
                 DynamicGenerationSchema.Property(
                     name: "tag\(index)",
-                    description: "Does the tag “\(name)” clearly apply to this place? True only if the text shows it.",
+                    description: "Would the user file this exact place under the tag “\(name)”? True only if “\(name)” describes what this place is, where it is, or what the text says it is for — not something merely related to it. A different kind of food, shop or place is false.",
                     schema: DynamicGenerationSchema(type: Bool.self)
                 )
             }
@@ -193,7 +196,7 @@ struct SpotExtractor: Sendable {
         \(facts)
 
         Text:
-        \(text.prefix(tagTextLimit))
+        \(tagExcerpt(of: text, around: extraction.title))
         """
 
         let session = LanguageModelSession(instructions: tagInstructions)
@@ -206,6 +209,24 @@ struct SpotExtractor: Sendable {
     }
 
     /// A handful is a tag; more is the whole vocabulary again.
+    /// From where the page first names the thing, not from its top: a
+    /// press release on PR TIMES opens with 800 characters of the site's
+    /// navigation, and the tags got picked from that.
+    private static func tagExcerpt(of text: String, around title: String?) -> Substring {
+        guard let title, let found = text.range(of: title) else { return text.prefix(tagTextLimit) }
+        return text[found.lowerBound...].prefix(tagTextLimit)
+    }
+
+    /// 「商品名」店名で数量限定販売！ → 商品名. A Japanese headline quotes the
+    /// thing's name and then says what's happening to it; the quoted part is
+    /// the name. Left alone when the brackets don't open the title.
+    static func quotedName(_ title: String) -> String {
+        guard title.hasPrefix("「"), let close = title.firstIndex(of: "」") else { return title }
+        let inner = title[title.index(after: title.startIndex)..<close]
+            .trimmingCharacters(in: .whitespaces)
+        return inner.count > 1 ? inner : title
+    }
+
     private static let maximumTags = 3
     /// One property per tag, and the context window is 4,096 tokens. Past
     /// this the vocabulary's first tags (the order Settings shows) are asked
@@ -255,7 +276,7 @@ struct SpotExtractor: Sendable {
         guard answer.isAboutOneThing || isCaption else { return extraction }
         extraction.isShop = answer.kind == .shop
         extraction.kind = "\(answer.kind)"
-        extraction.title = answer.title?.cleaned
+        extraction.title = answer.title?.cleaned.map(quotedName)
         extraction.venue = extraction.isShop ? extraction.title : answer.venue?.cleaned
         extraction.address = answer.address?.cleaned
         extraction.summary = answer.summary?.cleaned.map { String($0.prefix(maximumSummaryLength)) }
@@ -308,6 +329,22 @@ extension SpotDraft {
     /// date is set, and is flagged as suggested.
     mutating func fillEmptyFields(from extraction: SpotExtractor.Extraction) {
         if title.isEmpty, let title = extraction.title { self.title = title }
+        // A press release's og:title is the whole headline — 「商品名」店名で
+        // 数量限定販売！9月28日から… — and the model's name is the part of it
+        // that names the thing. Contained in it, so nothing is invented.
+        // Whitespace is compared flattened: the model's answer comes back
+        // with 「古舘春一　ハイキュー!!展」's full-width space made ASCII.
+        else if let name = extraction.title, name.count < title.count,
+                title.flattenedWhitespace.contains(name.flattenedWhitespace) {
+            title = name
+        }
+        // og:site_name is only a guess at the venue: right for a museum's
+        // own site, and "プレスリリース配信シェアNo.1｜PR TIMES" on a
+        // release about someone else's shop. The model read the page.
+        if isVenueFromSiteName, extraction.venue != nil || extraction.isShop {
+            venue = ""
+            isVenueFromSiteName = false
+        }
         if venue.isEmpty {
             // A shop is its own venue — even when OGP already named it.
             if extraction.isShop, !title.isEmpty { venue = title }
@@ -355,6 +392,11 @@ extension SpotDraft {
 }
 
 private extension String {
+    /// Every run of whitespace, full-width included, as one ASCII space.
+    var flattenedWhitespace: String {
+        replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+    }
+
     /// Trimmed, or nil when there's nothing left — the model sometimes answers
     /// with whitespace or a lone dash instead of null.
     var cleaned: String? {
@@ -368,8 +410,8 @@ private extension String {
 
 // MARK: - Page text
 
-/// The page as prose. `OGMetadataFetcher` stops at 64 KB because OG tags live
-/// in `<head>`; the run lives in the body, so this reads further, then boils
+/// The page as prose. `OGMetadataFetcher` stops at `</head>` because OG tags
+/// live there; the run lives in the body, so this reads further, then boils
 /// the HTML down to the passages a person would read to find the dates.
 enum PageText {
     /// Enough for the body of a typical venue page; the streaming cap below
@@ -400,7 +442,9 @@ enum PageText {
             return nil
         }
         stream.task.cancel()
-        return String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1)
+        // Cut off at the cap mid-character, a strict UTF-8 decode fails — the
+        // same decode as the OG read sheds the partial character first.
+        return OGMetadataFetcher.decode(data)
     }
 
     /// HTML → the parts worth reading, within `characterLimit`. The first

@@ -29,8 +29,13 @@ struct OGMetadataFetcher: Sendable {
         case unreadable
     }
 
-    /// OG tags are always in `<head>` — never read more than this (§13-9).
-    static let byteLimit = 64 * 1024
+    /// OG tags are always in `<head>`, so reading stops at `</head>` (§13-9).
+    /// This is only the cap for a page that never closes it. A fixed 64 KB
+    /// used to be the whole rule, until PR TIMES put 80 KB of monitoring
+    /// script ahead of its OG tags and every field came back empty.
+    static let byteLimit = 512 * 1024
+
+    private static let headEnd = Data("</head>".utf8)
 
     /// Throws only on transport failures. A page with no OG tags returns an
     /// empty `OGMetadata`; the caller leaves the fields alone (§13-10).
@@ -48,10 +53,16 @@ struct OGMetadataFetcher: Sendable {
         }
 
         var data = Data()
-        data.reserveCapacity(Self.byteLimit)
+        data.reserveCapacity(64 * 1024)
         for try await byte in stream {
             data.append(byte)
             if data.count >= Self.byteLimit { break }
+            // Every `>`, look back for `</head>` — the rest of the page is
+            // body, and the body has no OG tags.
+            if byte == UInt8(ascii: ">"), data.count >= Self.headEnd.count,
+               data.suffix(Self.headEnd.count).elementsEqual(Self.headEnd, by: { Self.lowercased($0) == $1 }) {
+                break
+            }
         }
         stream.task.cancel()
 
@@ -60,8 +71,20 @@ struct OGMetadataFetcher: Sendable {
     }
 
     /// `.utf8`, falling back to `.isoLatin1` (§13-9).
+    ///
+    /// A read cut off at the cap usually ends partway through a character —
+    /// Japanese is three bytes in UTF-8 — and a strict UTF-8 decode of that
+    /// fails outright, dropping the whole page into Latin-1 mojibake. Up to
+    /// three trailing bytes are shed before giving up on UTF-8.
     static func decode(_ data: Data) -> String? {
-        String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1)
+        for trim in 0...3 where data.count > trim {
+            if let text = String(data: data.dropLast(trim), encoding: .utf8) { return text }
+        }
+        return String(data: data, encoding: .isoLatin1)
+    }
+
+    private static func lowercased(_ byte: UInt8) -> UInt8 {
+        (UInt8(ascii: "A")...UInt8(ascii: "Z")).contains(byte) ? byte + 32 : byte
     }
 
     static func parse(_ html: String, base: URL) -> OGMetadata {
