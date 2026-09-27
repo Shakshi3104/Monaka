@@ -28,7 +28,14 @@ struct SpotFormView: View {
     @State private var tagInput = ""
     @State private var isNamingTag = false
     @State private var isFetchingMetadata = false
-    @State private var isPickingLocation = false
+    /// §4 — the picker opens from a tap nothing outside the app can make.
+    @State private var isPickingLocation = {
+        #if DEBUG
+        DebugLaunchArgument.locationPicker.isSet
+        #else
+        false
+        #endif
+    }()
 
     @FocusState private var isURLFocused: Bool
     /// The URL the last fetch ran against, so tapping into the field and back

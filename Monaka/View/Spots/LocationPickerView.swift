@@ -26,6 +26,9 @@ struct LocationPickerView: View {
     @State private var camera: MapCameraPosition = .automatic
     @State private var isSearching = false
     @State private var hasSearched = false
+    /// The result's index, as the map reports a tapped marker. Kept in step
+    /// with `picked` both ways, so a row tap selects its marker too.
+    @State private var selectedIndex: Int?
 
     var body: some View {
         NavigationStack {
@@ -58,8 +61,12 @@ struct LocationPickerView: View {
                     camera = .region(Self.region(around: current.coordinate))
                 }
                 query = initialQuery
-                if !initialQuery.isEmpty, current == nil {
-                    await search()
+                // Searched even when there's a pin already: a spot pinned
+                // from its address (the share sheet does that) is exactly the
+                // one you open this to correct, and an empty list gave you
+                // nothing to correct it to. The camera stays on the pin.
+                if !initialQuery.isEmpty {
+                    await search(keepingCamera: current != nil)
                 }
             }
         }
@@ -67,47 +74,71 @@ struct LocationPickerView: View {
 
     // MARK: - Map
 
+    /// A result can be picked from its marker as well as from the list —
+    /// the map is often where you recognise the right branch.
     private var map: some View {
-        Map(position: $camera) {
-            ForEach(results, id: \.self) { item in
+        Map(position: $camera, selection: $selectedIndex) {
+            ForEach(Array(results.enumerated()), id: \.offset) { index, item in
                 Marker(item.name ?? "", coordinate: item.coordinate)
                     .tint(isPicked(item) ? Color.accentColor : .secondary)
+                    .tag(index)
             }
-            if let picked, results.isEmpty {
+            // The current pin, when no result is it — otherwise opening this
+            // on a pinned spot hid where it actually is.
+            if let picked, !results.contains(where: isPicked) {
                 Marker(picked.name, coordinate: picked.coordinate)
                     .tint(Color.accentColor)
             }
         }
         .mapStyle(.standard)
+        .onChange(of: selectedIndex) { _, index in
+            // The camera stays put: the marker is already where the finger
+            // is, and zooming in would hide the other results around it.
+            guard let index, results.indices.contains(index), !isPicked(results[index]) else { return }
+            picked = PickedLocation(results[index])
+        }
     }
 
     // MARK: - Results
 
     private var resultList: some View {
-        List(results, id: \.self) { item in
-            Button {
-                select(item)
-            } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(item.name ?? "Unnamed place")
-                            .foregroundStyle(.primary)
-                        if let address = item.formattedAddress {
-                            Text(address)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                        }
+        ScrollViewReader { proxy in
+            List(Array(results.enumerated()), id: \.offset) { index, item in
+                resultRow(item, at: index)
+            }
+            .listStyle(.plain)
+            // A marker tapped on the map brings its row into view, checkmark
+            // and address, so you can see what you picked.
+            .onChange(of: selectedIndex) { _, index in
+                guard let index else { return }
+                withAnimation { proxy.scrollTo(index) }
+            }
+        }
+    }
+
+    private func resultRow(_ item: MKMapItem, at index: Int) -> some View {
+        Button {
+            select(item, at: index)
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.name ?? "Unnamed place")
+                        .foregroundStyle(.primary)
+                    if let address = item.formattedAddress {
+                        Text(address)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
                     }
-                    Spacer()
-                    if isPicked(item) {
-                        Image(systemName: "checkmark")
-                            .foregroundStyle(Color.accentColor)
-                    }
+                }
+                Spacer()
+                if isPicked(item) {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(Color.accentColor)
                 }
             }
         }
-        .listStyle(.plain)
+        .id(index)
     }
 
     @ViewBuilder
@@ -128,19 +159,27 @@ struct LocationPickerView: View {
 
     // MARK: - Search
 
+    /// Within a few tens of metres, not equal: a pin saved earlier and the
+    /// same place found again come back a hair apart, and exact equality
+    /// drew them as two markers with neither one checked.
     private func isPicked(_ item: MKMapItem) -> Bool {
         guard let picked else { return false }
-        return item.coordinate.latitude == picked.latitude
-            && item.coordinate.longitude == picked.longitude
+        let pin = CLLocation(latitude: picked.latitude, longitude: picked.longitude)
+        return item.location.distance(from: pin) < Self.samePlaceMeters
     }
 
-    private func select(_ item: MKMapItem) {
+    /// 国立新美術館 by name lands 32 m from the address-level pin; a building
+    /// is easily that wide.
+    private static let samePlaceMeters: CLLocationDistance = 60
+
+    private func select(_ item: MKMapItem, at index: Int) {
         let location = PickedLocation(item)
         picked = location
+        selectedIndex = index
         camera = .region(Self.region(around: location.coordinate))
     }
 
-    private func search() async {
+    private func search(keepingCamera: Bool = false) async {
         let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
             results = []
@@ -165,7 +204,9 @@ struct LocationPickerView: View {
             return
         }
         results = response.mapItems
-        if let first = response.mapItems.first {
+        // Indices of the old results mean nothing now.
+        selectedIndex = results.firstIndex(where: isPicked)
+        if !keepingCamera, let first = response.mapItems.first {
             camera = .region(Self.region(around: first.coordinate, meters: 2_000))
         }
     }

@@ -126,6 +126,7 @@ Most screens sit behind a tap nothing outside the app can make. Every DEBUG laun
 | `-add-first` | the Add sheet |
 | `-detail-first` | the Today tab's featured spot |
 | `-edit-first` | that spot's Edit sheet |
+| `-location-picker-first` | …its location picker (with `-edit-first`; the Add sheet's form too, with `-add-first`) |
 | `-settings-first` | Settings |
 | `-tags-first` | Settings → Tags |
 | `-new-tag-first` | Settings → Tags → New Tag |
