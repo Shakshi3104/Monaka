@@ -24,6 +24,8 @@ enum DebugLaunchArgument: String, CaseIterable {
     /// …and open its Edit sheet. Implies `-detail-first` in practice, since
     /// that is what puts a detail view on screen to open the sheet from.
     case editSheet = "-edit-first"
+    /// …and its location picker. Pass it together with `-edit-first`.
+    case locationPicker = "-location-picker-first"
 
     /// Open Settings on the All tab.
     case settingsSheet = "-settings-first"

@@ -33,6 +33,13 @@ struct SpotMapSnapshot: View {
                 .tint(Color.accentColor)
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        // The map itself must not pan or zoom inside a list row…
         .allowsHitTesting(false)
+        // …but the view still has to take a tap, or a Button wrapping it —
+        // the form's "change the pin", the detail view's "open in Maps" —
+        // never fires: `allowsHitTesting(false)` left it with no hit area.
+        .overlay {
+            Color.clear.contentShape(.rect)
+        }
     }
 }
