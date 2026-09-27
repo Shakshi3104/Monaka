@@ -30,6 +30,9 @@ struct SpotDraft: Equatable {
     /// the spot — it seeds the location picker's search, which is how a
     /// caption's 【住所】 line becomes a pin (§8.1).
     var suggestedAddress: String?
+    /// `venue` is the page's `og:site_name`, not something read from the
+    /// page — `SpotExtractor`'s venue replaces it (§8.1).
+    var isVenueFromSiteName = false
 
     var tags: [String] = []
     /// The tags came from `SpotExtractor` picking among the user's own. The
