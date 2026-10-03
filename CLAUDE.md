@@ -401,7 +401,7 @@ Monaka/
 │   ├── PlaceSearch.swift           name/address → coordinate, + MapKit bridging (duplicated in MonakaShare/)
 │   └── RunReminder.swift           local notification 3 days before a run ends, opt-in (Phase 3)
 └── View/
-    ├── SpotMapSnapshot.swift       one pin, no interaction (duplicated in MonakaShare/)
+    ├── SpotMapSnapshot.swift       one pin, a still MKMapSnapshotter image (duplicated in MonakaShare/)
     ├── FlowLayout.swift            wrapping chip layout — SwiftUI has none (duplicated in MonakaShare/)
     ├── TagChip.swift               one tag as a capsule, every form + detail (duplicated in MonakaShare/)
     ├── TagFilterMenu.swift         the tag filter menu All and Map share
@@ -524,6 +524,7 @@ Update this section as you complete items.
 
 16. **Both copies of `Spot.swift` and `SharedStore.swift` must stay identical** (§10). A drift between them is a store schema mismatch at runtime, not a compile error.
 17. **Keep TsuiseKit-style heavy dependencies out of `Spot.swift`** — anything that interprets a spot goes in `Spot+Period.swift`, which is app-only.
+17b. **The share extension is killed at around 120 MB — no live `Map` in it.** A live `Map` costs ~80 MB on its own, so the form that showed one closed the share sheet the moment a share got pinned (every café from Instagram). `SpotMapSnapshot` is an `MKMapSnapshotter` image for that reason; keep it one, and check anything heavy that the extension's form shows against that limit.
 
 ### Liquid Glass
 
