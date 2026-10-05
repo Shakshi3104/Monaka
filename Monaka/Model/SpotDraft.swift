@@ -33,6 +33,10 @@ struct SpotDraft: Equatable {
     /// `venue` is the page's `og:site_name`, not something read from the
     /// page — `SpotExtractor`'s venue replaces it (§8.1).
     var isVenueFromSiteName = false
+    /// A social post the network wouldn't show without signing in — an
+    /// age-gated reel, say. The page said only "Instagram", so the form
+    /// asks for the name instead of guessing (§8.1).
+    var isUnreadablePost = false
 
     var tags: [String] = []
     /// The tags came from `SpotExtractor` picking among the user's own. The

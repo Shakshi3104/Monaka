@@ -53,6 +53,8 @@ struct ShareFormView: View {
                             ProgressView()
                             Text("Reading it for the name, place and dates…")
                         }
+                    } else if draft.isUnreadablePost {
+                        Text("This post is only shown to signed-in accounts, so Monaka couldn't read it. Type the name, and pin it in Monaka afterwards.")
                     }
                 }
 
