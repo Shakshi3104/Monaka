@@ -31,6 +31,7 @@ struct SpotListView: View {
         DebugLaunchArgument.settingsSheet.isSet
             || DebugLaunchArgument.tagsScreen.isSet
             || DebugLaunchArgument.newTagScreen.isSet
+            || DebugLaunchArgument.aboutScreen.isSet
             || DebugLaunchArgument.iconPicker.isSet
         #else
         false
