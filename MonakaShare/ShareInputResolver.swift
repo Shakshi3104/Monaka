@@ -73,6 +73,15 @@ struct ShareInputResolver: Sendable {
         if Self.isSocialPost(url) {
             draft.title = Self.socialTitle(metadata.title ?? "")
             draft.notes = Self.socialCaption(metadata.description ?? "")
+            // A post shown only to signed-in accounts comes back as the
+            // network's own page: og:title "Instagram", no caption. Taking
+            // that as the title named the spot "Instagram" and pinned it at
+            // Meta's headquarters.
+            if draft.notes.isEmpty, draft.title.isEmpty || Self.networkNames.contains(draft.title) {
+                draft.title = ""
+                draft.imageURL = nil
+                draft.isUnreadablePost = true
+            }
         } else {
             draft.title = metadata.title ?? ""
             draft.venue = metadata.siteName ?? ""
@@ -140,6 +149,8 @@ struct ShareInputResolver: Sendable {
 
     /// A post on a social network, where the page is a wrapper around a
     /// caption and the site name says nothing about the place.
+    private static let networkNames: Set<String> = ["Instagram", "Threads", "X", "Twitter", "TikTok", "Facebook"]
+
     static func isSocialPost(_ url: URL) -> Bool {
         guard let host = url.host()?.lowercased() else { return false }
         return socialHosts.contains { host == $0 || host.hasSuffix("." + $0) }
@@ -163,7 +174,14 @@ extension SpotDraft {
     /// Merge a resolved draft in without clobbering anything already typed.
     mutating func fillEmptyFields(from other: SpotDraft) {
         if title.isEmpty { title = other.title }
-        if venue.isEmpty { venue = other.venue }
+        if venue.isEmpty {
+            venue = other.venue
+            // Carried with the venue it describes, or the model's venue
+            // never replaced PR TIMES's site name in a real form.
+            isVenueFromSiteName = other.isVenueFromSiteName
+        }
+        // About the page just read, not about anything typed.
+        isUnreadablePost = other.isUnreadablePost
         if urlString.isEmpty { urlString = other.urlString }
         if mapURL == nil { mapURL = other.mapURL }
         if notes.isEmpty { notes = other.notes }

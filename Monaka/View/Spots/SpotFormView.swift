@@ -121,7 +121,9 @@ struct SpotFormView: View {
         } header: {
             Text("Link")
         } footer: {
-            if SpotExtractor.isAvailable {
+            if draft.isUnreadablePost {
+                Text("This post is only shown to signed-in accounts, so Monaka couldn't read it. Type the name, or paste the post's caption instead.")
+            } else if SpotExtractor.isAvailable {
                 Text("Paste a link, or a post's caption. Fills in the title, image, venue and — read from the text — the dates, marked so you can check them.")
             } else {
                 Text("Fills in the title, image and venue from the page. Dates are always typed by hand.")
