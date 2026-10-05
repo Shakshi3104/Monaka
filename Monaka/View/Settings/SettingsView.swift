@@ -3,7 +3,8 @@
 //  Monaka
 //
 //  A sheet off the gear in the All tab (§6.1): the list's own options, and
-//  the app-wide ones (tags, reminders, location) that have no better home.
+//  the app-wide ones (tags, reminders, location) that have no better home,
+//  and About.
 //  The Map tab's gear opens `MapSettingsView` instead.
 //
 
@@ -17,6 +18,7 @@ enum SettingsRoute: Hashable {
     case tags
     case newTag
     case renameTag(String)
+    case about
 }
 
 struct SettingsView: View {
@@ -39,6 +41,7 @@ struct SettingsView: View {
             return [.tags, .newTag]
         }
         if DebugLaunchArgument.tagsScreen.isSet { return [.tags] }
+        if DebugLaunchArgument.aboutScreen.isSet { return [.about] }
         #endif
         return []
     }()
@@ -93,12 +96,19 @@ struct SettingsView: View {
                         Text("Each section is ordered nearest first. Sections themselves still go by how much of the run is left.")
                     }
                 }
+
+                Section {
+                    NavigationLink(value: SettingsRoute.about) {
+                        Text("About")
+                    }
+                }
             }
             .navigationDestination(for: SettingsRoute.self) { route in
                 switch route {
                 case .tags: TagsView()
                 case .newTag: TagEditView()
                 case let .renameTag(tag): TagEditView(tag: tag)
+                case .about: AboutView()
                 }
             }
             .navigationTitle("Settings")

@@ -131,6 +131,7 @@ Most screens sit behind a tap nothing outside the app can make. Every DEBUG laun
 | `-tags-first` | Settings → Tags |
 | `-new-tag-first` | Settings → Tags → New Tag |
 | `-icon-picker-first` | …→ its icon grid |
+| `-about-first` | Settings → About |
 | `-seed-samples` | nothing; fills the store first |
 
 `-seed-samples` fills the simulator's store with `Spot.samples`, which carry real Wikimedia images and real coordinates so the header image and map snapshot render. It is additive: a spot already in the store keeps everything it has and only gains the fields it was missing, so nothing you typed in the simulator is overwritten.
