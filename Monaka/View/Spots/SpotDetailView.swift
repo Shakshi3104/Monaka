@@ -295,10 +295,29 @@ struct SpotDetailView: View {
 
     private func notesSection(_ notes: String) -> some View {
         Section("Notes") {
-            Text(notes)
+            Text(Self.linkified(notes))
                 .font(.callout)
                 .textSelection(.enabled)
         }
+    }
+
+    /// Notes with every URL in them made tappable — a caption or a pasted
+    /// memo often carries the reservation page or an Instagram post. `Text`
+    /// hands a `.link` run to `openURL`, so it opens in Safari, or in the app
+    /// that claims it as a universal link.
+    private static func linkified(_ notes: String) -> AttributedString {
+        var attributed = AttributedString(notes)
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
+            return attributed
+        }
+        let matches = detector.matches(in: notes, range: NSRange(notes.startIndex..., in: notes))
+        for match in matches {
+            guard let url = match.url,
+                  let stringRange = Range(match.range, in: notes),
+                  let range = Range(stringRange, in: attributed) else { continue }
+            attributed[range].link = url
+        }
+        return attributed
     }
 
     private var tagSection: some View {
