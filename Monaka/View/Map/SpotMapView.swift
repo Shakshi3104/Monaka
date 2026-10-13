@@ -159,6 +159,10 @@ struct SpotMapView: View {
         .onAppear {
             refreshLocationAccess()
             frameAllPins()
+            #if DEBUG
+            // §4 — nothing outside the app can tap a pin.
+            if DebugLaunchArgument.mapSelection.isSet { selectedSpotID = pinned.first?.id }
+            #endif
         }
         // A filter can leave only pins that are off screen, which reads as
         // "nothing matched". Only the filters reframe — an edit or a check-off
@@ -224,44 +228,64 @@ struct SpotMapView: View {
 
     // MARK: - Selection
 
+    /// Two targets side by side: the card opens the detail view, the button
+    /// at its trailing end opens directions. They're siblings rather than a
+    /// button inside the link, or the link swallows the button's tap.
     private func selectionCard(_ spot: Spot) -> some View {
-        NavigationLink(value: spot) {
-            HStack(spacing: 12) {
-                SpotThumbnail(spot: spot, size: 44)
+        HStack(spacing: 8) {
+            NavigationLink(value: spot) {
+                HStack(spacing: 12) {
+                    SpotThumbnail(spot: spot, size: 44)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(spot.title)
-                        .font(.headline)
-                        .lineLimit(1)
-                        .foregroundStyle(.primary)
-                    Text([spot.venue, spot.hasRun ? spot.compactRunText(on: today) : nil]
-                        .compactMap { $0 }
-                        .joined(separator: " · "))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    // The countdown shares the title's line so the run below
+                    // gets the full width — with the Directions button
+                    // beside it, a third column cut the end date off (§6.3).
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(spot.title)
+                                .font(.headline)
+                                .lineLimit(1)
+                                .foregroundStyle(.primary)
+                            Spacer(minLength: 0)
+                            if let text = spot.countdown(on: today).text {
+                                Text(text)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(tint(for: spot))
+                                    .fixedSize()
+                            }
+                        }
+                        Text([spot.venue, spot.hasRun ? spot.compactRunText(on: today) : nil]
+                            .compactMap { $0 }
+                            .joined(separator: " · "))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
-
-                Spacer(minLength: 4)
-
-                if let text = spot.countdown(on: today).text {
-                    Text(text)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(tint(for: spot))
-                }
-
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                .padding(.vertical, 12)
+                .padding(.leading, 12)
+                // Without this the `Spacer` in the middle isn't hit-testable,
+                // the tap falls through to the Map, and the Map clears its
+                // selection — so the card appears to dismiss itself instead
+                // of navigating.
+                .contentShape(.rect)
             }
-            .padding(12)
-            // Without this the `Spacer` in the middle isn't hit-testable, the
-            // tap falls through to the Map, and the Map clears its selection —
-            // so the card appears to dismiss itself instead of navigating.
-            .contentShape(.rect(cornerRadius: 18))
+            .buttonStyle(.plain)
+            .navigationLinkIndicatorVisibility(.hidden)
+
+            // "I'm around here" is what this tab is for, so the route is one
+            // tap away instead of behind the detail view's Open in Maps.
+            Button("Directions", systemImage: "arrow.triangle.turn.up.right.circle.fill") {
+                spot.openDirectionsInMaps()
+            }
+            .labelStyle(.iconOnly)
+            .font(.title)
+            .foregroundStyle(Color.accentColor)
+            .frame(width: 44, height: 44)
+            .contentShape(.rect)
+            .buttonStyle(.plain)
+            .padding(.trailing, 8)
         }
-        .buttonStyle(.plain)
-        .navigationLinkIndicatorVisibility(.hidden)
         // A floating control over content — the one place glass belongs (§6.2).
         .glassEffect(.regular, in: .rect(cornerRadius: 18))
     }
