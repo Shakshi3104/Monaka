@@ -305,20 +305,21 @@ struct SpotDetailView: View {
     /// memo often carries the reservation page or an Instagram post. `Text`
     /// hands a `.link` run to `openURL`, so it opens in Safari, or in the app
     /// that claims it as a universal link.
+    ///
+    /// Web and mail links only: notes hold shared captions verbatim, and a
+    /// custom scheme in one would launch some other app on a single tap.
     private static func linkified(_ notes: String) -> AttributedString {
         var attributed = AttributedString(notes)
-        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
-            return attributed
-        }
-        let matches = detector.matches(in: notes, range: NSRange(notes.startIndex..., in: notes))
-        for match in matches {
-            guard let url = match.url,
-                  let stringRange = Range(match.range, in: notes),
-                  let range = Range(stringRange, in: attributed) else { continue }
-            attributed[range].link = url
+        for link in ShareInputResolver.links(in: notes) {
+            guard let scheme = link.url.scheme?.lowercased(),
+                  linkSchemes.contains(scheme),
+                  let range = Range(link.range, in: attributed) else { continue }
+            attributed[range].link = link.url
         }
         return attributed
     }
+
+    private static let linkSchemes: Set<String> = ["http", "https", "mailto"]
 
     private var tagSection: some View {
         // Wrapped, as in the form — a sideways scroll hid every tag past the

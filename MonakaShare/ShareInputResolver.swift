@@ -163,11 +163,22 @@ struct ShareInputResolver: Sendable {
 
     /// Shares often arrive as "some text https://…" in one string.
     static func firstURL(in text: String) -> URL? {
-        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
-        else { return nil }
-        let range = NSRange(text.startIndex..., in: text)
-        return detector.firstMatch(in: text, range: range)?.url
+        links(in: text).first?.url
     }
+
+    /// Every link in `text`, with where it sits — the detail view makes a
+    /// spot's notes tappable from these.
+    static func links(in text: String) -> [(range: Range<String.Index>, url: URL)] {
+        guard let linkDetector else { return [] }
+        let range = NSRange(text.startIndex..., in: text)
+        return linkDetector.matches(in: text, range: range).compactMap { match in
+            guard let url = match.url, let range = Range(match.range, in: text) else { return nil }
+            return (range, url)
+        }
+    }
+
+    /// Compiled once — building a detector is the expensive part.
+    private static let linkDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
 }
 
 extension SpotDraft {
