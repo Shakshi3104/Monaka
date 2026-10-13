@@ -6,6 +6,7 @@
 //
 
 import CoreLocation
+import MapKit
 
 extension Spot {
     var coordinate: CLLocationCoordinate2D? {
@@ -14,6 +15,20 @@ extension Spot {
     }
 
     var hasCoordinate: Bool { coordinate != nil }
+
+    /// Directions to the spot in Apple Maps, in whatever mode Maps defaults
+    /// to. Always Apple Maps, even for a place saved from Google — this is
+    /// the one-tap route from the Map tab, not the stored link (§8.2), which
+    /// the detail view's Open in Maps still opens.
+    func openDirectionsInMaps() {
+        guard let coordinate else { return }
+        let item = MKMapItem(
+            location: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
+            address: nil
+        )
+        item.name = venue?.nilIfBlank ?? title
+        item.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDefault])
+    }
 
     /// Metres from `location`, or `nil` when the spot has no coordinate.
     /// Used by the `Anytime` distance sort (§7.3).

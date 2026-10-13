@@ -123,6 +123,7 @@ Most screens sit behind a tap nothing outside the app can make. Every DEBUG laun
 | Argument | Opens |
 |---|---|
 | `-tab-all` / `-tab-map` | that tab |
+| `-map-select-first` | the Map's selection card (with `-tab-map`) |
 | `-add-first` | the Add sheet |
 | `-detail-first` | the Today tab's featured spot |
 | `-edit-first` | that spot's Edit sheet |

@@ -14,6 +14,8 @@ enum DebugLaunchArgument: String, CaseIterable {
     /// Open straight into a tab.
     case tabMap = "-tab-map"
     case tabAll = "-tab-all"
+    /// Select a pin on the Map tab so its card shows. Pass with `-tab-map`.
+    case mapSelection = "-map-select-first"
 
     /// Present the Add sheet over the Today tab.
     case addSheet = "-add-first"
