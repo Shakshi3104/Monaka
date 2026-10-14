@@ -19,6 +19,9 @@ enum DebugLaunchArgument: String, CaseIterable {
 
     /// Present the Add sheet over the Today tab.
     case addSheet = "-add-first"
+    /// …with this URL in its Link field, read as if it had been pasted.
+    /// Takes a value: `-add-first -add-url https://…`.
+    case addURL = "-add-url"
 
     /// Push the Today tab's featured spot.
     case detail = "-detail-first"
@@ -45,6 +48,14 @@ enum DebugLaunchArgument: String, CaseIterable {
 
     var isSet: Bool {
         ProcessInfo.processInfo.arguments.contains(rawValue)
+    }
+
+    /// The argument after this one, for the flags that take a value.
+    var value: String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: rawValue), arguments.indices.contains(index + 1)
+        else { return nil }
+        return arguments[index + 1]
     }
 }
 #endif
