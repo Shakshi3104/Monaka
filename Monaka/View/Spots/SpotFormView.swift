@@ -27,7 +27,9 @@ struct SpotFormView: View {
 
     @State private var tagInput = ""
     @State private var isNamingTag = false
+    /// The page fetch, then the model — two waits, shown differently.
     @State private var isFetchingMetadata = false
+    @State private var isExtracting = false
     /// §4 — the picker opens from a tap nothing outside the app can make.
     @State private var isPickingLocation = {
         #if DEBUG
@@ -67,6 +69,14 @@ struct SpotFormView: View {
         // Dates are entered and read as Asia/Tokyo wall-clock days (§6.1).
         .environment(\.timeZone, Calendar.monaka.timeZone)
         .locationPicker(draft: $draft, isPresented: $isPickingLocation)
+        #if DEBUG
+        // §4 — nothing outside the app can paste into the Link field.
+        .task {
+            guard let url = DebugLaunchArgument.addURL.value, draft.urlString.isEmpty else { return }
+            draft.urlString = url
+            await autofill()
+        }
+        #endif
     }
 
     // MARK: - Link + OGP autofill
@@ -90,6 +100,10 @@ struct SpotFormView: View {
 
                 if isFetchingMetadata {
                     ProgressView()
+                } else if isExtracting {
+                    // The footer says what's happening; a paste or reload
+                    // button here would only start a second read.
+                    EmptyView()
                 } else if draft.urlString.isEmpty {
                     // Text, not URL: a copied link is text too, and so is
                     // a post's caption, which has no link in it.
@@ -121,7 +135,9 @@ struct SpotFormView: View {
         } header: {
             Text("Link")
         } footer: {
-            if draft.isUnreadablePost {
+            if isExtracting {
+                IntelligenceReadingLabel()
+            } else if draft.isUnreadablePost {
                 Text("This post is only shown to signed-in accounts, so Monaka couldn't read it. Type the name, or paste the post's caption instead.")
             } else if SpotExtractor.isAvailable {
                 Text("Paste a link, or a post's caption. Fills in the title, image, venue and — read from the text — the dates, marked so you can check them.")
@@ -149,17 +165,19 @@ struct SpotFormView: View {
         isFetchingMetadata = true
         isBusy.wrappedValue = true
         lastFetchedURL = draft.urlString
-        defer { isFetchingMetadata = false; isBusy.wrappedValue = false }
+        defer { isFetchingMetadata = false; isExtracting = false; isBusy.wrappedValue = false }
 
         // Through the dispatcher, so a pasted Google Maps link fills the
         // coordinates instead of being fetched as a web page (§8.1).
         let resolved = await ShareInputResolver().resolve(.url(url))
         draft.fillEmptyFields(from: resolved)
+        isFetchingMetadata = false
 
         // Then the on-device model, for what OGP can't give: a venue named
         // in the body and the run. It only ever fills what is still empty,
         // and the run it proposes is flagged as such.
         guard !MapLinkResolver.isMapLink(url), SpotExtractor.isAvailable else { return }
+        isExtracting = true
         if ShareInputResolver.isSocialPost(url) {
             // The caption is the page. The og:title (“user on Instagram: …”)
             // is no title, so this path replaces it.
@@ -176,9 +194,9 @@ struct SpotFormView: View {
     /// The model finds the name; the caption itself goes to Notes.
     private func adoptCaption(_ caption: String) async {
         guard SpotExtractor.isAvailable else { return }
-        isFetchingMetadata = true
+        isExtracting = true
         isBusy.wrappedValue = true
-        defer { isFetchingMetadata = false; isBusy.wrappedValue = false }
+        defer { isExtracting = false; isBusy.wrappedValue = false }
         if let extraction = await SpotExtractor().extract(fromText: caption, isCaption: true, tags: allTags) {
             draft.adopt(extraction, caption: caption)
         }

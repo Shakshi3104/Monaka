@@ -49,17 +49,9 @@ struct ShareFormView: View {
                             Text("Reading the page…")
                         }
                     } else if isExtracting {
-                        // The model's turn, not the network's: Apple
-                        // Intelligence's own mark, breathing, and the text
-                        // shimmering while it reads, so the two waits don't
-                        // look the same.
-                        HStack(spacing: 6) {
-                            Image(systemName: "apple.intelligence")
-                                .symbolRenderingMode(.multicolor)
-                                .symbolEffect(.breathe)
-                            Text("Reading it for the name, place and dates…")
-                                .modifier(Shimmer())
-                        }
+                        // The model's turn, not the network's, so the two
+                        // waits don't look the same.
+                        IntelligenceReadingLabel()
                     } else if draft.isUnreadablePost {
                         Text("This post is only shown to signed-in accounts, so Monaka couldn't read it. Type the name, and pin it in Monaka afterwards.")
                     }
@@ -345,37 +337,4 @@ extension Calendar {
         calendar.locale = Locale(identifier: "en_US_POSIX")
         return calendar
     }()
-}
-
-// MARK: - Shimmer
-
-/// A band of the label colour sweeping across the text, the way a
-/// notification summary shimmers while Apple Intelligence writes it. There is
-/// no public API for that one; this is a gradient masked by the text — cheap
-/// enough for the extension's memory limit (§13-17b).
-private struct Shimmer: ViewModifier {
-    @State private var phase: CGFloat = 0
-
-    func body(content: Content) -> some View {
-        content
-            .overlay {
-                GeometryReader { geometry in
-                    let band = geometry.size.width * 0.4
-                    LinearGradient(
-                        colors: [.clear, Color(.label), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(width: band)
-                    .offset(x: -band + phase * (geometry.size.width + band))
-                }
-                .mask(content)
-                .allowsHitTesting(false)
-            }
-            .onAppear {
-                withAnimation(.linear(duration: 1.8).repeatForever(autoreverses: false)) {
-                    phase = 1
-                }
-            }
-    }
 }

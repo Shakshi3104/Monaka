@@ -125,6 +125,7 @@ Most screens sit behind a tap nothing outside the app can make. Every DEBUG laun
 | `-tab-all` / `-tab-map` | that tab |
 | `-map-select-first` | the Map's selection card (with `-tab-map`) |
 | `-add-first` | the Add sheet |
+| `-add-url <url>` | …with that URL read into its Link field, OGP and model both (with `-add-first`) |
 | `-detail-first` | the Today tab's featured spot |
 | `-edit-first` | that spot's Edit sheet |
 | `-location-picker-first` | …its location picker (with `-edit-first`; the Add sheet's form too, with `-add-first`) |
@@ -366,9 +367,9 @@ Two things still need Xcode's GUI and must be handed back to the user:
 - New **targets** (the share extension, the widget extension)
 - **Capabilities** (App Groups) and asset catalog entries created through the asset editor
 
-Also: a synchronized folder can only belong to one target. These thirteen files are therefore **duplicated verbatim** into `MonakaShare/`:
+Also: a synchronized folder can only belong to one target. These fourteen files are therefore **duplicated verbatim** into `MonakaShare/`:
 
-`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`, `SpotExtractor.swift`, `ClearableTextField.swift`, `SpotMapSnapshot.swift`, `PlaceSearch.swift`, `TagVocabulary.swift`, `FlowLayout.swift`, `TagChip.swift`
+`Spot.swift`, `SpotDraft.swift`, `SharedStore.swift`, `OGMetadataFetcher.swift`, `MapLinkResolver.swift`, `ShareInputResolver.swift`, `SpotExtractor.swift`, `ClearableTextField.swift`, `SpotMapSnapshot.swift`, `PlaceSearch.swift`, `TagVocabulary.swift`, `FlowLayout.swift`, `TagChip.swift`, `IntelligenceReadingLabel.swift`
 
 **Edit both copies together**, and keep them byte-identical — `diff` them after touching any of them. Only files with no app-only dependency belong on this list; anything that interprets a spot (`Spot+Period.swift`) stays app-only.
 
@@ -408,6 +409,7 @@ Monaka/
     ├── TagChip.swift               one tag as a capsule, every form + detail (duplicated in MonakaShare/)
     ├── TagFilterMenu.swift         the tag filter menu All and Map share
     ├── ClearableTextField.swift    TextField + ⓧ, both forms (duplicated in MonakaShare/)
+    ├── IntelligenceReadingLabel.swift  apple.intelligence + shimmer while the model reads (duplicated in MonakaShare/)
     ├── Today/
     │   └── TodayView.swift         featured pick + This Weekend / Ending Soon / Open Now
     ├── Spots/
