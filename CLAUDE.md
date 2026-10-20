@@ -270,7 +270,7 @@ It reorders **within** each section, never across them — `Anytime` is where it
 
 While it's on, a row shows the distance under the countdown — both, since one says how long you've got and the other how far it is.
 
-**Reminders follow the same rule.** `RunReminder` asks for notification permission only from the Settings toggle (`remindsBeforeEnd`), fires at 9:00 JST three days before `endDate` for unvisited spots, and is rebuilt from the whole store on every `ModelContext.didSave` and on becoming active. A tap sets `AppRouter.shared.pendingSpotID`; the All tab pushes that spot.
+**Reminders follow the same rule.** `RunReminder` asks for notification permission only from the Settings toggle (`remindsBeforeEnd`), fires before `endDate` for unvisited spots — how many days (`reminderLeadDays`: 1 / 2 / 3 / 5 days or 1 week, default 3) and at what Asia/Tokyo time (`reminderMinuteOfDay`, default 9:00) are set in rows that appear under the toggle once it's on — and is rebuilt from the whole store on every `ModelContext.didSave` and on becoming active. A tap sets `AppRouter.shared.pendingSpotID`; the All tab pushes that spot.
 
 **Request location only when the user turns that toggle on.** Never at launch, never on first import, never on opening the Map tab. Once granted, the Map tab shows the user dot and a `MapUserLocationButton` — it *reads* the authorization status, which prompts nothing, and the button only exists when permission is already there (tapping it would otherwise ask). `INFOPLIST_KEY_NSLocationWhenInUseUsageDescription` explains it in those terms. The app is fully usable with location denied — `LocationProvider.access` becomes `.denied`, Settings says so, and the lists keep their usual order.
 
@@ -402,7 +402,7 @@ Monaka/
 │   ├── SavedPlacesImporter.swift   Google Takeout CSV → [SpotDraft]
 │   ├── LocationProvider.swift      CoreLocation, When In Use, requested lazily
 │   ├── PlaceSearch.swift           name/address → coordinate, + MapKit bridging (duplicated in MonakaShare/)
-│   └── RunReminder.swift           local notification 3 days before a run ends, opt-in (Phase 3)
+│   └── RunReminder.swift           local notification before a run ends; days and time set in Settings, opt-in (Phase 3)
 └── View/
     ├── SpotMapSnapshot.swift       one pin, a still MKMapSnapshotter image (duplicated in MonakaShare/)
     ├── FlowLayout.swift            wrapping chip layout — SwiftUI has none (duplicated in MonakaShare/)
@@ -480,7 +480,7 @@ MonakaShare/                        share extension target (Phase 2)
 ### Phase 3 — Reminding
 - [ ] `SavedPlacesImporter` — Takeout CSV import with preview (§8.3)
 - [ ] Widget (ending soon / this weekend)
-- [x] Local notification 3 days before a run ends — `RunReminder`, opt-in from Settings, tap opens the spot
+- [x] Local notification before a run ends — `RunReminder`, opt-in from Settings with the lead days and time, tap opens the spot
 
 ### Phase 4 — Beyond
 - [ ] `CalendarView` (month grid with run bars)

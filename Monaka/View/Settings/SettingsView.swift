@@ -31,6 +31,8 @@ struct SettingsView: View {
     @AppStorage("hidesVisitedSection") private var hidesVisitedSection = false
     @AppStorage("sortsByDistance") private var sortsByDistance = false
     @AppStorage(RunReminder.storageKey) private var remindsBeforeEnd = false
+    @AppStorage(RunReminder.leadDaysKey) private var reminderLeadDays = RunReminder.defaultLeadDays
+    @AppStorage(RunReminder.minuteOfDayKey) private var reminderMinuteOfDay = RunReminder.defaultMinuteOfDay
     @State private var reminderAccess: RunReminder.Access = .notDetermined
 
     let locationProvider: LocationProvider
@@ -45,6 +47,32 @@ struct SettingsView: View {
         #endif
         return []
     }()
+
+    /// Off, the footer says what the toggle does; on, what's been set — a
+    /// time and a day count only mean something once the rows are there.
+    private var reminderSummary: String {
+        guard remindsBeforeEnd else {
+            return "A notification before a run ends, for spots you haven't visited. You choose how many days before, and when."
+        }
+        return "A notification at \(RunReminder.timeText(reminderMinuteOfDay)), \(RunReminder.leadText(reminderLeadDays)) before a run ends, for spots you haven't visited."
+    }
+
+    /// `reminderMinuteOfDay` as a `Date` for the picker — today at that time
+    /// in Asia/Tokyo. Only the hour and minute are read back.
+    private var reminderTime: Binding<Date> {
+        let calendar = Calendar.monaka
+        return Binding {
+            calendar.date(
+                bySettingHour: reminderMinuteOfDay / 60,
+                minute: reminderMinuteOfDay % 60,
+                second: 0,
+                of: .now
+            ) ?? .now
+        } set: { date in
+            let components = calendar.dateComponents([.hour, .minute], from: date)
+            reminderMinuteOfDay = (components.hour ?? 9) * 60 + (components.minute ?? 0)
+        }
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -65,7 +93,20 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Toggle("Remind Me Before a Run Ends", isOn: $remindsBeforeEnd)
+                    Toggle("Remind Me Before a Run Ends", isOn: $remindsBeforeEnd.animation())
+                    // Only while there's a reminder to set — with
+                    // notifications denied there is nothing they'd change.
+                    if remindsBeforeEnd, reminderAccess != .denied {
+                        Picker("Days Before", selection: $reminderLeadDays) {
+                            ForEach(RunReminder.leadDayOptions, id: \.self) { days in
+                                Text(RunReminder.leadText(days)).tag(days)
+                            }
+                        }
+                        DatePicker("Time", selection: reminderTime, displayedComponents: .hourAndMinute)
+                            // The stored minutes are Asia/Tokyo wall-clock
+                            // time, so the wheel must be too (§6.1).
+                            .environment(\.timeZone, Calendar.monaka.timeZone)
+                    }
                 } header: {
                     Text("Reminders")
                 } footer: {
@@ -74,10 +115,10 @@ struct SettingsView: View {
                     switch reminderAccess {
                     case .denied:
                         Text("Notifications are off for Monaka in Settings, so no reminder can be sent.")
-                    case .notDetermined:
-                        Text("A notification at \(RunReminder.hour):00, \(RunReminder.leadDays) days before a run ends, for spots you haven't visited. Turning this on asks for permission once.")
-                    case .authorized:
-                        Text("A notification at \(RunReminder.hour):00, \(RunReminder.leadDays) days before a run ends, for spots you haven't visited.")
+                    case .notDetermined where !remindsBeforeEnd:
+                        Text("\(reminderSummary) Turning this on asks for permission once.")
+                    case .notDetermined, .authorized:
+                        Text(reminderSummary)
                     }
                 }
 
@@ -92,6 +133,10 @@ struct SettingsView: View {
                         Text("Location is denied in Settings, so the list keeps its usual order.")
                     case .notDetermined:
                         Text("Orders each section nearest first. Turning this on asks for your location once. It's used only for this and to show where you are on the Map.")
+                    // Like Reminders: off, say what the toggle would do;
+                    // on, say what it's doing.
+                    case .authorized where !sortsByDistance:
+                        Text("Orders each section nearest first. Sections themselves still go by how much of the run is left.")
                     case .authorized:
                         Text("Each section is ordered nearest first. Sections themselves still go by how much of the run is left.")
                     }
