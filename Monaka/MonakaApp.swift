@@ -11,6 +11,8 @@ struct MonakaApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(RunReminder.storageKey) private var remindsBeforeEnd = false
+    @AppStorage(RunReminder.leadDaysKey) private var reminderLeadDays = RunReminder.defaultLeadDays
+    @AppStorage(RunReminder.minuteOfDayKey) private var reminderMinuteOfDay = RunReminder.defaultMinuteOfDay
 
     init() {
         // Before any view reads it through `@AppStorage`.
@@ -42,6 +44,12 @@ struct MonakaApp: App {
                 .onChange(of: remindsBeforeEnd) { _, _ in
                     Task { await refreshReminders() }
                 }
+                .onChange(of: reminderLeadDays) { _, _ in
+                    Task { await refreshReminders() }
+                }
+                .onChange(of: reminderMinuteOfDay) { _, _ in
+                    Task { await refreshReminders() }
+                }
                 #if DEBUG
                 // §4 — `-seed-samples` fills a simulator store with the same
                 // spread the previews use. Additive: it never overwrites a spot
@@ -58,6 +66,11 @@ struct MonakaApp: App {
     @MainActor
     private func refreshReminders() async {
         let spots = (try? modelContainer.mainContext.fetch(FetchDescriptor<Spot>())) ?? []
-        await RunReminder.refresh(spots, enabled: remindsBeforeEnd)
+        await RunReminder.refresh(
+            spots,
+            enabled: remindsBeforeEnd,
+            leadDays: reminderLeadDays,
+            minuteOfDay: reminderMinuteOfDay
+        )
     }
 }
