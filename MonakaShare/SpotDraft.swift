@@ -155,7 +155,7 @@ extension SpotDraft {
     /// A `FormatStyle` rather than the `DateFormatter.monakaDate` in
     /// Spot+Period.swift: this file compiles into the share extension too,
     /// which can't see anything app-only (§10).
-    private static let dateStyle: Date.VerbatimFormatStyle = {
+    static let dateStyle: Date.VerbatimFormatStyle = {
         let timeZone = TimeZone(identifier: "Asia/Tokyo") ?? .current
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone

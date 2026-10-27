@@ -40,8 +40,12 @@ struct ShareFormView: View {
         NavigationStack {
             Form {
                 Section {
-                    ClearableTextField("Title", text: $draft.title)
-                    ClearableTextField("Venue", text: $draft.venue)
+                    IconRow("pencil") {
+                        ClearableTextField("Title", text: $draft.title)
+                    }
+                    IconRow("building.2") {
+                        ClearableTextField("Venue", text: $draft.venue)
+                    }
                 } footer: {
                     if isResolving {
                         HStack(spacing: 6) {
@@ -57,17 +61,11 @@ struct ShareFormView: View {
                     }
                 }
 
-                sourceSection
                 locationSection
-                runSection
+                RunSection(draft: $draft)
                 tagSection
-
-                Section {
-                    TextField("Closed Mondays, book ahead…", text: $draft.notes, axis: .vertical)
-                        .lineLimit(2...5)
-                } header: {
-                    Text("Notes")
-                }
+                // Last, the same order as the app's form and Calendar's.
+                detailsSection
             }
             .environment(\.timeZone, Calendar.monaka.timeZone)
             .navigationTitle("Save to Monaka")
@@ -191,15 +189,19 @@ struct ShareFormView: View {
         }
     }
 
-    // MARK: - What was captured
+    // MARK: - Details
 
-    /// What the resolver actually read, so you can tell a page that gave up its
-    /// poster from one that handed over a logo — the only check available here,
-    /// since the extension has no map picker to fall back on.
-    @ViewBuilder
-    private var sourceSection: some View {
-        if let imageURL = draft.imageURL, let url = URL(string: imageURL) {
-            Section("From the Page") {
+    /// Notes, and what the resolver actually read, so you can tell a page that
+    /// gave up its poster from one that handed over a logo — the only check
+    /// available here, since the extension has no map picker to fall back on.
+    private var detailsSection: some View {
+        Section {
+            IconRow("text.alignleft") {
+                TextField("Closed Mondays, book ahead…", text: $draft.notes, axis: .vertical)
+                    .lineLimit(1...5)
+            }
+
+            if let imageURL = draft.imageURL, let url = URL(string: imageURL) {
                 HStack(spacing: 12) {
                     AsyncImage(url: url) { image in
                         image.resizable().scaledToFill()
@@ -227,47 +229,8 @@ struct ShareFormView: View {
                     .buttonStyle(.plain)
                 }
             }
-        }
-    }
-
-    // MARK: - Run
-
-    private var runSection: some View {
-        Section {
-            Toggle("Start date", isOn: Binding(
-                get: { draft.startDate != nil },
-                set: { draft.runStart = $0 ? (draft.startDate ?? draft.defaultRunStart) : nil }
-            ))
-            if draft.startDate != nil {
-                // Through `runStart` / `runEnd`, so the two ends can't end up
-                // the wrong way round.
-                DatePicker(
-                    "Starts",
-                    selection: Binding(
-                        get: { draft.startDate ?? .now },
-                        set: { draft.runStart = $0 }
-                    ),
-                    displayedComponents: .date
-                )
-            }
-            Toggle("End date", isOn: Binding(
-                get: { draft.endDate != nil },
-                set: { draft.runEnd = $0 ? (draft.endDate ?? draft.defaultRunEnd) : nil }
-            ))
-            if draft.endDate != nil {
-                DatePicker(
-                    "Ends",
-                    selection: Binding(
-                        get: { draft.endDate ?? .now },
-                        set: { draft.runEnd = $0 }
-                    ),
-                    displayedComponents: .date
-                )
-            }
         } header: {
-            Text("Run")
-        } footer: {
-            Text(draft.runFooter)
+            Text("Details")
         }
     }
 

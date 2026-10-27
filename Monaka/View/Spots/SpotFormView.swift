@@ -47,24 +47,22 @@ struct SpotFormView: View {
     var body: some View {
         Form {
             Section("Spot") {
-                ClearableTextField("Title", text: $draft.title)
-                ClearableTextField("Venue", text: $draft.venue)
+                IconRow("pencil") {
+                    ClearableTextField("Title", text: $draft.title)
+                }
+                IconRow("building.2") {
+                    ClearableTextField("Venue", text: $draft.venue)
+                }
             }
-
-            // Directly under the fields it fills. It used to sit below Tags,
-            // which put the paste-a-URL route — the one §8 calls the main path —
-            // at the bottom of the form, under everything it was meant to save
-            // you from typing.
-            linkSection
 
             SpotLocationSection(draft: $draft, isRequired: requiresLocation, isPicking: $isPickingLocation)
-            runSection
+            RunSection(draft: $draft)
             tagSection
 
-            Section("Notes") {
-                TextField("Closed Mondays, book ahead…", text: $draft.notes, axis: .vertical)
-                    .lineLimit(3...8)
-            }
+            // Last, as Calendar keeps Notes and URL under Details: what you
+            // came to fill in is the title, place and run, and a link
+            // pasted down here still fills them in above.
+            detailsSection
         }
         // Dates are entered and read as Asia/Tokyo wall-clock days (§6.1).
         .environment(\.timeZone, Calendar.monaka.timeZone)
@@ -79,17 +77,22 @@ struct SpotFormView: View {
         #endif
     }
 
-    // MARK: - Link + OGP autofill
+    // MARK: - Details: Notes + Link with OGP autofill
 
-    /// One field with one control at its trailing edge, the way iOS puts a
-    /// clear or reload button in a text field — rather than a row of floating
-    /// capsules, which a grouped form has no vocabulary for.
+    /// The link is one field with one control at its trailing edge, the way
+    /// iOS puts a clear or reload button in a text field — rather than a row
+    /// of floating capsules, which a grouped form has no vocabulary for.
     ///
     /// The control is whatever the field needs next: paste into it while it's
     /// empty, re-read the page once there's a URL in it.
-    private var linkSection: some View {
+    private var detailsSection: some View {
         Section {
-            HStack(spacing: 8) {
+            IconRow("text.alignleft") {
+                TextField("Closed Mondays, book ahead…", text: $draft.notes, axis: .vertical)
+                    .lineLimit(1...8)
+            }
+
+            IconRow("link") {
                 ClearableTextField("https://", text: $draft.urlString)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -133,7 +136,7 @@ struct SpotFormView: View {
                 SpotImagePreview(url: url) { draft.imageURL = nil }
             }
         } header: {
-            Text("Link")
+            Text("Details")
         } footer: {
             if isExtracting {
                 IntelligenceReadingLabel()
@@ -199,58 +202,6 @@ struct SpotFormView: View {
         defer { isExtracting = false; isBusy.wrappedValue = false }
         if let extraction = await SpotExtractor().extract(fromText: caption, isCaption: true, tags: allTags) {
             draft.adopt(extraction, caption: caption)
-        }
-    }
-
-    // MARK: - Location
-
-    @ViewBuilder
-    // MARK: - Run
-
-    private var hasStartDate: Binding<Bool> {
-        Binding(
-            get: { draft.startDate != nil },
-            set: { draft.runStart = $0 ? (draft.startDate ?? draft.defaultRunStart) : nil }
-        )
-    }
-
-    private var hasEndDate: Binding<Bool> {
-        Binding(
-            get: { draft.endDate != nil },
-            set: { draft.runEnd = $0 ? (draft.endDate ?? draft.defaultRunEnd) : nil }
-        )
-    }
-
-    private var runSection: some View {
-        Section {
-            Toggle("Start date", isOn: hasStartDate)
-            if draft.startDate != nil {
-                // Through `runStart`, so pushing the start past the end drags
-                // the end along instead of leaving a backwards run.
-                DatePicker(
-                    "Starts",
-                    selection: Binding(
-                        get: { draft.startDate ?? .now },
-                        set: { draft.runStart = $0 }
-                    ),
-                    displayedComponents: .date
-                )
-            }
-            Toggle("End date", isOn: hasEndDate)
-            if draft.endDate != nil {
-                DatePicker(
-                    "Ends",
-                    selection: Binding(
-                        get: { draft.endDate ?? .now },
-                        set: { draft.runEnd = $0 }
-                    ),
-                    displayedComponents: .date
-                )
-            }
-        } header: {
-            Text("Run")
-        } footer: {
-            Text(draft.runFooter)
         }
     }
 
