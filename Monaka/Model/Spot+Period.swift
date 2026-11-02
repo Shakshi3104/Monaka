@@ -375,9 +375,12 @@ extension DateFormatter {
 
 extension Spot {
     /// `2026/04/11 – 2026/06/21`, `Until 2026/06/21`, `From 2026/10/03`, `Anytime`.
+    /// A one-day run is just its date: `2026/11/03`.
     var runText: String {
         let format = DateFormatter.monakaDate.string(from:)
         switch run {
+        case let .period(start, end) where Calendar.monaka.isDate(start, inSameDayAs: end):
+            return format(start)
         case let .period(start, end):
             return "\(format(start)) – \(format(end))"
         case let .until(end):
@@ -393,7 +396,8 @@ extension Spot {
     /// fit beside a venue name and the end date, the half that matters, was
     /// the half that got truncated. The year appears only on a date outside
     /// the current year (`12/20 – 2027/1/10`), so a run that crosses New
-    /// Year still says so.
+    /// Year still says so. A one-day run has room for the full §6.1 date
+    /// (`2026/11/03`), and without a range a bare `11/3` wouldn't read as one.
     func compactRunText(on today: Date = .now, calendar: Calendar = .monaka) -> String {
         let thisYear = calendar.component(.year, from: today)
         func format(_ date: Date) -> String {
@@ -402,6 +406,8 @@ extension Spot {
                 : DateFormatter.monakaCompactDate.string(from: date)
         }
         switch run {
+        case let .period(start, end) where calendar.isDate(start, inSameDayAs: end):
+            return DateFormatter.monakaDate.string(from: start)
         case let .period(start, end):
             return "\(format(start)) – \(format(end))"
         case let .until(end):

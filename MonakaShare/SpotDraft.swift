@@ -173,6 +173,8 @@ extension SpotDraft {
         let format = { (date: Date) in Self.dateStyle.format(date) }
         let reading: String
         switch (startDate, endDate) {
+        case let (start?, end?) where Calendar.monaka.isDate(start, inSameDayAs: end):
+            reading = "Open on \(format(start)) only."
         case let (start?, end?):
             reading = "Open \(format(start)) – \(format(end))."
         case let (nil, end?):
