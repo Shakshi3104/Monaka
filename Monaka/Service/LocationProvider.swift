@@ -25,6 +25,10 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
     private(set) var access: Access = .notDetermined
 
     @ObservationIgnored private let manager = CLLocationManager()
+    /// Set by `start()`, cleared by `stop()`. CLLocationManager reports its
+    /// authorization once on creation, so without this an already-granted
+    /// permission would start updates with distance sort off.
+    @ObservationIgnored private var wantsUpdates = false
 
     override init() {
         super.init()
@@ -36,6 +40,7 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
     /// Asks for permission if it hasn't been asked yet, then starts updating.
     /// Call this from the distance-sort toggle, nowhere else.
     func start() {
+        wantsUpdates = true
         switch access {
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
@@ -47,6 +52,7 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
     }
 
     func stop() {
+        wantsUpdates = false
         manager.stopUpdatingLocation()
     }
 
@@ -54,7 +60,7 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         access = Self.access(for: manager.authorizationStatus)
-        if access == .authorized {
+        if access == .authorized, wantsUpdates {
             manager.startUpdatingLocation()
         }
     }
