@@ -22,6 +22,8 @@ struct SpotMapView: View {
     /// Both live in Settings → Map; the toolbar is for the tag filter.
     @AppStorage("mapShowsVisited") private var showsVisited = false
     @AppStorage("mapShowsEnded") private var showsEnded = false
+    /// Picked from the map-mode button over the map, the way Maps does it.
+    @AppStorage(MapAppearance.storageKey) private var appearance: MapAppearance = .standard
     @AppStorage(TagVocabulary.storageKey, store: TagVocabulary.defaults) private var vocabularyRaw = ""
 
     @State private var selectedTag: String?
@@ -30,6 +32,7 @@ struct SpotMapView: View {
     @State private var selectedSpotID: UUID?
     @State private var isShowingUnpinned = false
     @State private var isShowingSettings = false
+    @State private var isShowingMapMode = false
     @State private var today: Date = .now
     /// Read, never requested. `MapUserLocationButton` asks for permission
     /// when tapped, so it only exists once permission is already there.
@@ -141,19 +144,26 @@ struct SpotMapView: View {
                 }
             }
         }
-        .mapStyle(.standard(pointsOfInterest: .excludingAll))
+        .mapStyle(appearance.style)
+        // The location button moved into `mapButtons`; the compass stays
+        // where the system puts it.
         .mapControls {
-            if isLocationAuthorized {
-                MapUserLocationButton()
-            }
+            MapCompass()
         }
         .safeAreaInset(edge: .bottom) {
-            if let selected {
-                selectionCard(selected)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            VStack(alignment: .trailing, spacing: 12) {
+                mapButtons
+                if let selected {
+                    selectionCard(selected)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+        }
+        .sheet(isPresented: $isShowingMapMode) {
+            MapModeView(selection: $appearance)
         }
         .animation(.snappy(duration: 0.25), value: selectedSpotID)
         .onAppear {
@@ -162,6 +172,7 @@ struct SpotMapView: View {
             #if DEBUG
             // §4 — nothing outside the app can tap a pin.
             if DebugLaunchArgument.mapSelection.isSet { selectedSpotID = pinned.first?.id }
+            if DebugLaunchArgument.mapModeSheet.isSet { isShowingMapMode = true }
             #endif
         }
         // A filter can leave only pins that are off screen, which reads as
@@ -170,6 +181,34 @@ struct SpotMapView: View {
         .onChange(of: selectedTag) { frameAllPins(animated: true) }
         .onChange(of: showsVisited) { frameAllPins(animated: true) }
         .onChange(of: showsEnded) { frameAllPins(animated: true) }
+    }
+
+    /// Maps' pair at the bottom trailing corner: which map, then where you
+    /// are, in one glass capsule. The location half is a plain camera move,
+    /// not `MapUserLocationButton` — that one asks for permission when tapped,
+    /// and it can't share a capsule. It still only exists once permission is
+    /// already there (§7.3).
+    private var mapButtons: some View {
+        VStack(spacing: 0) {
+            Button("Map Mode", systemImage: appearance.systemImage) {
+                isShowingMapMode = true
+            }
+            .frame(width: 48, height: 48)
+
+            if isLocationAuthorized {
+                Button("Current Location", systemImage: camera.followsUserLocation ? "location.fill" : "location") {
+                    withAnimation { camera = .userLocation(fallback: camera) }
+                }
+                .frame(width: 48, height: 48)
+            }
+        }
+        .labelStyle(.iconOnly)
+        .font(.title3)
+        .buttonStyle(.plain)
+        .foregroundStyle(.primary)
+        .contentShape(.capsule)
+        // A floating control over content — the one place glass belongs (§6.2).
+        .glassEffect(.regular.interactive(), in: .capsule)
     }
 
     private func frameAllPins(animated: Bool = false) {

@@ -124,6 +124,7 @@ Most screens sit behind a tap nothing outside the app can make. Every DEBUG laun
 |---|---|
 | `-tab-all` / `-tab-map` | that tab |
 | `-map-select-first` | the Map's selection card (with `-tab-map`) |
+| `-map-mode-first` | the Map's Map Mode sheet (with `-tab-map`) |
 | `-add-first` | the Add sheet |
 | `-add-url <url>` | …with that URL read into its Link field, OGP and model both (with `-add-first`) |
 | `-detail-first` | the Today tab's featured spot |
@@ -189,7 +190,7 @@ Use Xcode 27.0 at `/Applications/Xcode.app` (`export DEVELOPER_DIR=/Applications
 - **English UI.** Every user-facing string is English. Data fetched from a venue's page (venue names, exhibition titles in Japanese) stays as-is — that's source data.
 - **Dates: `yyyy/MM/dd`, `en_US_POSIX` locale, `Asia/Tokyo` timezone.** Always set **both** `locale` and `timeZone` on a `DateFormatter`. The TZ pin matters when the user is travelling.
 - **System colors only.** `.primary` / `.secondary` / `.tertiary` for text, `Color(.systemGroupedBackground)` / `Color(.secondarySystemGroupedBackground)` for surfaces, `Color.accentColor` for the yozora tint. Never hardcode `Color.white` / `Color.black` / `.preferredColorScheme(.dark)`.
-- **Three tabs.** `ContentView` is a `TabView`: **Today** (where to go today), **All** (the full §7.2 sectioned list), **Map**. Each tab owns its own `NavigationStack`. Settings is a gear in the nav bar opening a sheet (Madeleine / yomy style) — **per tab**: the All tab's gear opens `SettingsView` (the list's options plus Tags, Reminders, Location), the Map tab's opens `MapSettingsView` (what the map pins). Trailing toolbar on both is `[tag filter][gear]`; the Map's unpinned count sits leading.
+- **Three tabs.** `ContentView` is a `TabView`: **Today** (where to go today), **All** (the full §7.2 sectioned list), **Map**. Each tab owns its own `NavigationStack`. Settings is a gear in the nav bar opening a sheet (Madeleine / yomy style) — **per tab**: the All tab's gear opens `SettingsView` (the list's options plus Tags, Reminders, Location), the Map tab's opens `MapSettingsView` (what the map pins). Trailing toolbar on both is `[tag filter][gear]`; the Map's unpinned count sits leading. Which map — Standard / Transit / Satellite (`MapAppearance`) — is not a setting: as in Maps, it's a button over the map's bottom-trailing corner, sharing a glass capsule with the current-location button, that opens `MapModeView`. MapKit has no public transit style, so Transit is the standard map with station symbols on.
   - `Today` carries only `This Weekend` / `Ending Soon` / `Open Now`, led by one featured spot. `Upcoming`, `Anytime`, `Visited` and `Ended` live in `All`.
   - The featured spot is **also** listed in the section below it. The card is a highlight, not a removal.
   - **Add lives in the tab bar's detached capsule at the right end** — `role: .prominent` on iOS 27, falling back to `role: .search` on 26. `.search` was the only trailing-separated slot on iOS 26 and Add borrowed it; iOS 27 gave the separation its own role and draws a borrowed `.search` inline with the other tabs, so the role is picked behind an `#available`. It is not a real tab either way: selecting it bounces the selection back and presents the Add sheet. No FAB.
@@ -272,7 +273,7 @@ While it's on, a row shows the distance under the countdown — both, since one 
 
 **Reminders follow the same rule.** `RunReminder` asks for notification permission only from the Settings toggle (`remindsBeforeEnd`), fires before `endDate` for unvisited spots — how many days (`reminderLeadDays`: 1 / 2 / 3 / 5 days or 1 week, default 3) and at what Asia/Tokyo time (`reminderMinuteOfDay`, default 9:00) are set in rows that appear under the toggle once it's on — and is rebuilt from the whole store on every `ModelContext.didSave` and on becoming active. A tap sets `AppRouter.shared.pendingSpotID`; the All tab pushes that spot.
 
-**Request location only when the user turns that toggle on.** Never at launch, never on first import, never on opening the Map tab. Once granted, the Map tab shows the user dot and a `MapUserLocationButton` — it *reads* the authorization status, which prompts nothing, and the button only exists when permission is already there (tapping it would otherwise ask). `INFOPLIST_KEY_NSLocationWhenInUseUsageDescription` explains it in those terms. The app is fully usable with location denied — `LocationProvider.access` becomes `.denied`, Settings says so, and the lists keep their usual order.
+**Request location only when the user turns that toggle on.** Never at launch, never on first import, never on opening the Map tab. Once granted, the Map tab shows the user dot and a current-location button under the map-mode button — it *reads* the authorization status, which prompts nothing, and the button only exists when permission is already there. It is a plain camera move, not `MapUserLocationButton`, which would ask when tapped and can't share the map-mode button's capsule. `INFOPLIST_KEY_NSLocationWhenInUseUsageDescription` explains it in those terms. The app is fully usable with location denied — `LocationProvider.access` becomes `.denied`, Settings says so, and the lists keep their usual order.
 
 ---
 
@@ -424,7 +425,9 @@ Monaka/
     │   ├── LocationPickerView.swift  MKLocalSearch + pin, §8.1 (app-only)
     │   └── SpotRowView.swift       row + spotSwipeActions
     ├── Map/
-    │   └── SpotMapView.swift       all spots with coordinates, pins tinted by countdown
+    │   ├── SpotMapView.swift       all spots with coordinates, pins tinted by countdown
+    │   ├── MapAppearance.swift     Standard / Transit / Satellite → MapStyle
+    │   └── MapModeView.swift       the map-mode sheet, snapshot tiles
     ├── Calendar/
     │   └── CalendarView.swift      month grid with run bars (Phase 4)
     └── Settings/
