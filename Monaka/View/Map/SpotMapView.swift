@@ -38,6 +38,9 @@ struct SpotMapView: View {
     /// when tapped, so it only exists once permission is already there.
     @State private var isLocationAuthorized = false
 
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.displayScale) private var displayScale
+
     /// Tokyo, for when there is nothing to frame yet.
     private static let fallbackRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 35.6812, longitude: 139.7671),
@@ -166,6 +169,11 @@ struct SpotMapView: View {
             MapModeView(selection: $appearance)
         }
         .animation(.snappy(duration: 0.25), value: selectedSpotID)
+        // The Map Mode tiles are snapshots; drawing them while the map is
+        // already up means the sheet opens with them in place.
+        .task(id: colorScheme) {
+            MapModeThumbnails.shared.prefetch(isDark: colorScheme == .dark, scale: displayScale)
+        }
         .onAppear {
             refreshLocationAccess()
             frameAllPins()
