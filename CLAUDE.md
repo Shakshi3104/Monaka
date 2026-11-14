@@ -283,7 +283,7 @@ Typing a spot by hand is the fallback, not the path. Three capture routes, all l
 
 ### 8.1 The dispatcher
 
-The share extension and the in-app URL field both hand their input to `ShareInputResolver`, which branches on the URL's host:
+The share extension and the in-app URL field both hand their input to `ShareInputResolver`, which branches on the URL's host. Before anything else it strips tracking parameters (`ShareInputResolver.removingTrackingParameters` — `utm_*`, `fbclid`, `gclid`, `igsh`, …, plus per-host keys like YouTube's `si`), so the saved `urlString` is the page's own address; a page's real query (`?id=123`) is kept:
 
 | Input | Handler | Fills |
 |---|---|---|

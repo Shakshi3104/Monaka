@@ -161,9 +161,12 @@ struct SpotFormView: View {
     /// Silent on failure — a page with no OG tags is normal (§13-10). Only
     /// fills fields the user hasn't already written in.
     private func autofill() async {
-        guard let url = URL(string: draft.urlString.trimmingCharacters(in: .whitespacesAndNewlines)),
-              let scheme = url.scheme, scheme == "http" || scheme == "https"
+        guard let typed = URL(string: draft.urlString.trimmingCharacters(in: .whitespacesAndNewlines)),
+              let scheme = typed.scheme, scheme == "http" || scheme == "https"
         else { return }
+        // The Link field keeps what's saved, so it shows the cleaned link too.
+        let url = ShareInputResolver.removingTrackingParameters(from: typed)
+        if url != typed { draft.urlString = url.absoluteString }
 
         isFetchingMetadata = true
         isBusy.wrappedValue = true

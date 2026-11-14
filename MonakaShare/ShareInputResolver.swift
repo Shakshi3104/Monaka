@@ -27,7 +27,8 @@ struct ShareInputResolver: Sendable {
             draft.title = text.trimmingCharacters(in: .whitespacesAndNewlines)
             return draft
 
-        case let .url(url):
+        case let .url(shared):
+            let url = Self.removingTrackingParameters(from: shared)
             if MapLinkResolver.isMapLink(url) {
                 return await resolveMapLink(url)
             }
@@ -159,6 +160,42 @@ struct ShareInputResolver: Sendable {
     private static let socialHosts: [String] = [
         "instagram.com", "threads.net", "threads.com", "x.com", "twitter.com",
         "facebook.com", "tiktok.com", "youtube.com", "youtu.be", "note.com"
+    ]
+
+    /// `https://100th.toray/exhibition/?utm_source=meta&fbclid=…` →
+    /// `https://100th.toray/exhibition/`. A link shared from an ad or a
+    /// post carries the campaign that brought it, which is nothing about
+    /// the page and makes the saved link unreadable. Only known tracking
+    /// keys go — a page's own query (`?id=123`) is part of its address.
+    static func removingTrackingParameters(from url: URL) -> URL {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let items = components.percentEncodedQueryItems, !items.isEmpty
+        else { return url }
+        let host = url.host()?.lowercased() ?? ""
+        let hostKeys = hostTrackingKeys.first { host == $0.key || host.hasSuffix("." + $0.key) }?.value ?? []
+        let kept = items.filter { item in
+            let name = item.name.lowercased()
+            return !name.hasPrefix("utm_") && !trackingKeys.contains(name) && !hostKeys.contains(name)
+        }
+        guard kept.count != items.count else { return url }
+        components.percentEncodedQueryItems = kept.isEmpty ? nil : kept
+        return components.url ?? url
+    }
+
+    /// Click IDs and share IDs from ad networks, mailers and social apps.
+    private static let trackingKeys: Set<String> = [
+        "fbclid", "gclid", "gclsrc", "dclid", "gbraid", "wbraid", "msclkid",
+        "yclid", "twclid", "ttclid", "li_fat_id", "mc_cid", "mc_eid",
+        "igsh", "igshid", "_ga", "_gl", "ref_src", "ref_url"
+    ]
+
+    /// Keys that are tracking only on one site — YouTube's `t` is a
+    /// timestamp, so `si` is dropped there and nowhere else.
+    private static let hostTrackingKeys: [String: Set<String>] = [
+        "youtube.com": ["si", "feature"],
+        "youtu.be": ["si", "feature"],
+        "x.com": ["s", "t"],
+        "twitter.com": ["s", "t"]
     ]
 
     /// Shares often arrive as "some text https://…" in one string.
