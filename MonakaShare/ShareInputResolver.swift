@@ -161,6 +161,63 @@ struct ShareInputResolver: Sendable {
         "facebook.com", "tiktok.com", "youtube.com", "youtu.be", "note.com"
     ]
 
+    /// `https://100th.toray/exhibition/?utm_source=meta&fbclid=…` →
+    /// `https://100th.toray/exhibition/`. A link shared from an ad or a
+    /// post carries the campaign that brought it, which is nothing about
+    /// the page and makes the saved link unreadable. Only known tracking
+    /// keys go — a page's own query (`?id=123`) is part of its address.
+    ///
+    /// Applied once, where input comes in (`Input.removingTrackingParameters`,
+    /// the Link field), never inside `resolve` — so the OGP fetch, the model's
+    /// fetch and the saved link all see the same URL.
+    ///
+    /// A map link is returned as it is: its raw form is what's kept (§13-11).
+    /// The query is filtered as text rather than through `URLComponents`,
+    /// whose query setters trap on items a lenient parse let through.
+    static func removingTrackingParameters(from url: URL) -> URL {
+        guard !MapLinkResolver.isMapLink(url) else { return url }
+        let string = url.absoluteString
+        let fragmentStart = string.firstIndex(of: "#") ?? string.endIndex
+        guard let queryStart = string[..<fragmentStart].firstIndex(of: "?") else { return url }
+
+        let host = url.host()?.lowercased() ?? ""
+        let hostKeys = hostTrackingKeys.first { host == $0.key || host.hasSuffix("." + $0.key) }?.value ?? []
+        let pairs = string[string.index(after: queryStart)..<fragmentStart]
+            .split(separator: "&", omittingEmptySubsequences: false)
+        let kept = pairs.filter { pair in
+            let rawName = String(pair.prefix { $0 != "=" })
+            // `utm%5Fsource` is `utm_source`.
+            let name = (rawName.removingPercentEncoding ?? rawName).lowercased()
+            return !name.hasPrefix("utm_") && !trackingKeys.contains(name) && !hostKeys.contains(name)
+        }
+        guard kept.count != pairs.count else { return url }
+
+        var cleaned = String(string[..<queryStart])
+        if !kept.isEmpty { cleaned += "?" + kept.joined(separator: "&") }
+        cleaned += string[fragmentStart...]
+        return URL(string: cleaned) ?? url
+    }
+
+    /// Click IDs from ad networks, mailers and social apps — names no page
+    /// uses for anything of its own, so they go on every host.
+    private static let trackingKeys: Set<String> = [
+        "fbclid", "gclid", "gclsrc", "dclid", "gbraid", "wbraid", "msclkid",
+        "yclid", "twclid", "ttclid", "li_fat_id", "mc_cid", "mc_eid",
+        "igsh", "igshid", "_ga", "_gl"
+    ]
+
+    /// Names too short or too common to strip everywhere, dropped only on
+    /// the site where they're known to be share tracking. On X, `s` is the
+    /// sharing client, `t` a share token and `ref_src` the referring page;
+    /// on YouTube, `si` is the share ID and `feature` the button used. Not
+    /// YouTube's `t` — that's the timestamp the link starts at.
+    private static let hostTrackingKeys: [String: Set<String>] = [
+        "youtube.com": ["si", "feature"],
+        "youtu.be": ["si", "feature"],
+        "x.com": ["s", "t", "ref_src"],
+        "twitter.com": ["s", "t", "ref_src"]
+    ]
+
     /// Shares often arrive as "some text https://…" in one string.
     static func firstURL(in text: String) -> URL? {
         links(in: text).first?.url
@@ -179,6 +236,26 @@ struct ShareInputResolver: Sendable {
 
     /// Compiled once — building a detector is the expensive part.
     private static let linkDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+}
+
+extension ShareInputResolver.Input {
+    /// The same input with tracking parameters off its link. The share
+    /// sheet applies this to what it's handed, before anything reads it.
+    /// In shared text ("name https://…") the first link — the one `resolve`
+    /// reads — is cleaned in place.
+    var removingTrackingParameters: Self {
+        switch self {
+        case let .url(url):
+            return .url(ShareInputResolver.removingTrackingParameters(from: url))
+        case let .text(text):
+            guard let link = ShareInputResolver.links(in: text).first else { return self }
+            let cleaned = ShareInputResolver.removingTrackingParameters(from: link.url)
+            guard cleaned != link.url else { return self }
+            var replaced = text
+            replaced.replaceSubrange(link.range, with: cleaned.absoluteString)
+            return .text(replaced)
+        }
+    }
 }
 
 extension SpotDraft {

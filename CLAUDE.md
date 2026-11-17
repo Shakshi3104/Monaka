@@ -283,7 +283,7 @@ Typing a spot by hand is the fallback, not the path. Three capture routes, all l
 
 ### 8.1 The dispatcher
 
-The share extension and the in-app URL field both hand their input to `ShareInputResolver`, which branches on the URL's host:
+The share extension and the in-app URL field both hand their input to `ShareInputResolver`, which branches on the URL's host. Tracking parameters are stripped once, where the input comes in — the share sheet's `Input.removingTrackingParameters`, the Link field's autofill — not inside `resolve`, so the OGP fetch, `SpotExtractor`'s fetch and the saved `urlString` all see the same URL (`ShareInputResolver.removingTrackingParameters` — `utm_*`, `fbclid`, `gclid`, `igsh`, …, plus per-host keys like YouTube's `si` and X's `s`/`t`/`ref_src`). A page's real query (`?id=123`) is kept, a map link is kept raw (§13-11), and an existing spot's saved link is never rewritten:
 
 | Input | Handler | Fills |
 |---|---|---|

@@ -88,7 +88,9 @@ struct ShareFormView: View {
             }
             .task {
                 tagsInUse = Self.tagsInStore()
-                guard let input = await load() else { isResolving = false; return }
+                // Cleaned here, once: the OGP fetch, the model's fetch and
+                // the saved link all read the same URL.
+                guard let input = await load()?.removingTrackingParameters else { isResolving = false; return }
                 let resolved = await ShareInputResolver().resolve(input)
                 draft.fillEmptyFields(from: resolved)
                 isResolving = false
