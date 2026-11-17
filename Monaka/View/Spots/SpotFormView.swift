@@ -43,6 +43,10 @@ struct SpotFormView: View {
     /// The URL the last fetch ran against, so tapping into the field and back
     /// out doesn't re-request a page nothing has changed about.
     @State private var lastFetchedURL = ""
+    /// The link the form opened with — an existing spot's saved link. That
+    /// one is the user's and is left as it is; only a link typed or pasted
+    /// here is cleaned of tracking parameters.
+    @State private var openingURL: String?
 
     var body: some View {
         Form {
@@ -67,6 +71,13 @@ struct SpotFormView: View {
         // Dates are entered and read as Asia/Tokyo wall-clock days (§6.1).
         .environment(\.timeZone, Calendar.monaka.timeZone)
         .locationPicker(draft: $draft, isPresented: $isPickingLocation)
+        .onAppear {
+            guard openingURL == nil else { return }
+            openingURL = draft.urlString
+            // Already the saved link: tapping into the field and out again
+            // is no reason to read it.
+            lastFetchedURL = draft.urlString
+        }
         #if DEBUG
         // §4 — nothing outside the app can paste into the Link field.
         .task {
@@ -165,7 +176,10 @@ struct SpotFormView: View {
               let scheme = typed.scheme, scheme == "http" || scheme == "https"
         else { return }
         // The Link field keeps what's saved, so it shows the cleaned link too.
-        let url = ShareInputResolver.removingTrackingParameters(from: typed)
+        // The spot's own saved link is never rewritten behind the user's back.
+        let url = draft.urlString == openingURL
+            ? typed
+            : ShareInputResolver.removingTrackingParameters(from: typed)
         if url != typed { draft.urlString = url.absoluteString }
 
         isFetchingMetadata = true
