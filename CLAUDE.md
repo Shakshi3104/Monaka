@@ -230,6 +230,8 @@ These interpretations live as computed properties in `Spot+Period.swift`, **not*
 
 Evaluated top to bottom; a spot lands in the **first** section it matches and appears only there.
 
+The visit date (`visitedAt`) is stamped by the detail screen's Visited button and can be corrected afterwards in Edit (a Visited row in the Run section, not clearable, no future dates); checking off and unchecking stay the button's job.
+
 `isVisited` is checked **before** every dated section: once a spot is checked off it leaves the active list, whatever its run says. That's also what `Ended`'s "never visited" condition implies.
 
 | Section | Condition | Sort |
@@ -412,7 +414,7 @@ Monaka/
     ├── ClearableTextField.swift    TextField + ⓧ, both forms (duplicated in MonakaShare/)
     ├── IntelligenceReadingLabel.swift  apple.intelligence + shimmer while the model reads (duplicated in MonakaShare/)
     ├── IconRow.swift               a form row led by a secondary glyph, Calendar-style (duplicated in MonakaShare/)
-    ├── RunSection.swift            Starts / Ends as date capsules with an inline calendar, both forms (duplicated in MonakaShare/)
+    ├── RunSection.swift            Starts / Ends (and Visited, for a visited spot) as date capsules with an inline calendar, both forms (duplicated in MonakaShare/)
     ├── Today/
     │   └── TodayView.swift         featured pick + This Weekend / Ending Soon / Open Now
     ├── Spots/

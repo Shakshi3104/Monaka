@@ -17,7 +17,7 @@ import SwiftUI
 struct RunSection: View {
     @Binding var draft: SpotDraft
 
-    private enum Edge { case start, end }
+    private enum Edge { case start, end, visited }
 
     /// One calendar open at a time, as in Calendar.
     @State private var expanded: Edge?
@@ -40,6 +40,19 @@ struct RunSection: View {
                 defaultDate: draft.defaultRunEnd,
                 isExpanded: isExpanded(.end)
             )
+            // Next to the run it was a visit to, as the detail screen shows
+            // it. Only a visited spot has one; the share sheet never does.
+            if let visitedAt = draft.visitedAt {
+                RunDateRow(
+                    "Visited",
+                    systemImage: "checkmark.circle",
+                    date: Binding(get: { visitedAt }, set: { draft.visitedAt = $0 ?? visitedAt }),
+                    defaultDate: visitedAt,
+                    latest: .now,
+                    isClearable: false,
+                    isExpanded: isExpanded(.visited)
+                )
+            }
         } header: {
             Text("Run")
         } footer: {
@@ -61,6 +74,11 @@ private struct RunDateRow: View {
     @Binding var date: Date?
     /// What "None" becomes when tapped.
     let defaultDate: Date
+    /// The last day the calendar offers — a visit can't be in the future.
+    let latest: Date?
+    /// Whether the date can go back to "None". A visit date can't: being
+    /// visited is the detail screen's button, not a field here.
+    let isClearable: Bool
     @Binding var isExpanded: Bool
 
     init(
@@ -68,12 +86,16 @@ private struct RunDateRow: View {
         systemImage: String,
         date: Binding<Date?>,
         defaultDate: Date,
+        latest: Date? = nil,
+        isClearable: Bool = true,
         isExpanded: Binding<Bool>
     ) {
         self.title = title
         self.systemImage = systemImage
         _date = date
         self.defaultDate = defaultDate
+        self.latest = latest
+        self.isClearable = isClearable
         _isExpanded = isExpanded
     }
 
@@ -93,15 +115,17 @@ private struct RunDateRow: View {
                 .buttonStyle(.plain)
 
                 // Same glyph as ClearableTextField's: back to "None".
-                Button("Clear", systemImage: "xmark.circle.fill") {
-                    withAnimation {
-                        isExpanded = false
-                        self.date = nil
+                if isClearable {
+                    Button("Clear", systemImage: "xmark.circle.fill") {
+                        withAnimation {
+                            isExpanded = false
+                            self.date = nil
+                        }
                     }
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
                 }
-                .labelStyle(.iconOnly)
-                .foregroundStyle(.secondary)
-                .buttonStyle(.plain)
             } else {
                 Button {
                     withAnimation {
@@ -117,11 +141,14 @@ private struct RunDateRow: View {
         }
 
         if isExpanded, let date {
-            DatePicker(
-                title,
-                selection: Binding(get: { date }, set: { self.date = $0 }),
-                displayedComponents: .date
-            )
+            Group {
+                let selection = Binding(get: { date }, set: { self.date = $0 })
+                if let latest {
+                    DatePicker(title, selection: selection, in: ...max(latest, date), displayedComponents: .date)
+                } else {
+                    DatePicker(title, selection: selection, displayedComponents: .date)
+                }
+            }
             .datePickerStyle(.graphical)
             .labelsHidden()
         }

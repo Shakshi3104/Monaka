@@ -38,6 +38,12 @@ struct SpotDraft: Equatable {
     /// asks for the name instead of guessing (§8.1).
     var isUnreadablePost = false
 
+    /// When a visited spot was checked off — editable, since the tap that
+    /// stamps it often comes days after the visit. `nil` for a spot not
+    /// visited, so the form shows the row only for one that is. Checking off
+    /// and unchecking stay the detail screen's Visited button.
+    var visitedAt: Date?
+
     var tags: [String] = []
     /// The tags came from `SpotExtractor` picking among the user's own. The
     /// form says so until a tag is tapped, like `isRunSuggested`.
@@ -102,6 +108,7 @@ struct SpotDraft: Equatable {
         startDate = spot.startDate
         endDate = spot.endDate
         tags = spot.tags
+        visitedAt = spot.isVisited ? spot.visitedAt : nil
         if let latitude = spot.latitude, let longitude = spot.longitude {
             location = PickedLocation(
                 name: spot.venue ?? spot.title,
@@ -112,8 +119,9 @@ struct SpotDraft: Equatable {
         }
     }
 
-    /// Write the edits back. `addedAt`, `isVisited` and `visitedAt` are the
-    /// spot's own history and are never touched by the form.
+    /// Write the edits back. `addedAt` and `isVisited` are the spot's own
+    /// history and are never touched by the form; `visitedAt` is corrected
+    /// here only on a spot that is still visited.
     func apply(to spot: Spot) {
         spot.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         spot.venue = venue.nilIfBlank
@@ -127,6 +135,7 @@ struct SpotDraft: Equatable {
         spot.longitude = location?.longitude
         spot.address = location?.address
         spot.tags = tags
+        if spot.isVisited, let visitedAt { spot.visitedAt = visitedAt }
     }
 
     func makeSpot() -> Spot {
