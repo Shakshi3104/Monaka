@@ -126,7 +126,9 @@ struct TodayView: View {
         .onAppear {
             guard DebugLaunchArgument.detail.isSet || DebugLaunchArgument.editSheet.isSet,
                   path.isEmpty,
-                  let spot = digest.featured?.spot
+                  let spot = DebugLaunchArgument.visitedSpot.isSet
+                    ? spots.first(where: \.isVisited)
+                    : digest.featured?.spot
             else { return }
             path = [spot]
         }
