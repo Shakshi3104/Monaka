@@ -16,6 +16,8 @@ import SwiftUI
 /// reading of the run (§7.1), not a field left blank.
 struct RunSection: View {
     @Binding var draft: SpotDraft
+    /// Opens with the Visited calendar showing — for §4's screenshots only.
+    var opensVisitedCalendar = false
 
     private enum Edge { case start, end, visited }
 
@@ -57,6 +59,9 @@ struct RunSection: View {
             Text("Run")
         } footer: {
             Text(draft.runFooter)
+        }
+        .onAppear {
+            if opensVisitedCalendar, draft.visitedAt != nil { expanded = .visited }
         }
     }
 

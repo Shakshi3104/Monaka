@@ -60,7 +60,13 @@ struct SpotFormView: View {
             }
 
             SpotLocationSection(draft: $draft, isRequired: requiresLocation, isPicking: $isPickingLocation)
-            RunSection(draft: $draft)
+            RunSection(draft: $draft, opensVisitedCalendar: {
+                #if DEBUG
+                DebugLaunchArgument.visitedCalendar.isSet
+                #else
+                false
+                #endif
+            }())
             tagSection
 
             // Last, as Calendar keeps Notes and URL under Details: what you

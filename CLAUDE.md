@@ -129,6 +129,8 @@ Most screens sit behind a tap nothing outside the app can make. Every DEBUG laun
 | `-add-url <url>` | …with that URL read into its Link field, OGP and model both (with `-add-first`) |
 | `-detail-first` | the Today tab's featured spot |
 | `-edit-first` | that spot's Edit sheet |
+| `-visited-first` | the first visited spot instead of the featured one (with `-detail-first` / `-edit-first`) |
+| `-visited-calendar-first` | …its Edit sheet's Visited calendar, open (with `-edit-first -visited-first`) |
 | `-location-picker-first` | …its location picker (with `-edit-first`; the Add sheet's form too, with `-add-first`) |
 | `-settings-first` | Settings |
 | `-tags-first` | Settings → Tags |

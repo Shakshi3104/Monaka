@@ -31,6 +31,11 @@ enum DebugLaunchArgument: String, CaseIterable {
     /// …and open its Edit sheet. Implies `-detail-first` in practice, since
     /// that is what puts a detail view on screen to open the sheet from.
     case editSheet = "-edit-first"
+    /// With `-detail-first` / `-edit-first`: the first visited spot instead
+    /// of the featured one, which is never visited.
+    case visitedSpot = "-visited-first"
+    /// …and the Edit sheet's Visited calendar open. Pass with `-edit-first`.
+    case visitedCalendar = "-visited-calendar-first"
     /// …and its location picker. Pass it together with `-edit-first`.
     case locationPicker = "-location-picker-first"
 
